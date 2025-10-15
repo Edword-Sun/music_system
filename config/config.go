@@ -15,7 +15,7 @@ func GetDatabaseConfig() DatabaseConfig {
 		Port:     "3306",
 		User:     "root",
 		Password: "root",
-		DBName:   "backend_gorm_template_db",
+		DBName:   "music_system",
 		Charset:  "utf8mb4",
 	}
 }

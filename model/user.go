@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"gorm.io/gorm"
+	"time"
+)
 
 type User struct {
 	ID          string    `gorm:"primarykey type:text;default:gen_random_uuid()" json:"id"`
@@ -14,4 +17,15 @@ type User struct {
 
 func (m *User) TableName() string {
 	return "user"
+}
+
+func (m *User) BeforeCreate(tx *gorm.DB) (err error) {
+	m.UpdatedTime = time.Now()
+	m.CreatedTime = time.Now()
+	return nil
+}
+
+func (m *User) BeforeUpdate(tx *gorm.DB) (err error) {
+	m.UpdatedTime = time.Now()
+	return nil
 }
