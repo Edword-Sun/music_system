@@ -6,7 +6,6 @@ import (
 
 	"gorm.io/gorm"
 
-	"music_system/config"
 	"music_system/model"
 )
 
@@ -14,9 +13,9 @@ type UserRepository struct {
 	db *gorm.DB
 }
 
-func NewUserRepository() *UserRepository {
+func NewUserRepository(db *gorm.DB) *UserRepository {
 	return &UserRepository{
-		db: config.DB,
+		db: db,
 	}
 }
 
@@ -35,6 +34,9 @@ func (repo *UserRepository) Create(user *model.User) error {
 func (repo *UserRepository) Find(user *model.User) (error, *model.User) {
 	var data model.User
 	query := repo.db.Model(&model.User{})
+	if len(user.ID) > 0 {
+		query = query.Where("id = ?", user.ID)
+	}
 	if len(user.Name) > 0 {
 		query = query.Where("name = ?", user.Name)
 	}
@@ -45,7 +47,7 @@ func (repo *UserRepository) Find(user *model.User) (error, *model.User) {
 		query = query.Where("email = ?", user.Email)
 	}
 
-	err := query.Where("id = ?", user.ID).First(&data).Error
+	err := query.First(&data).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil // Record not found, return no error and nil user

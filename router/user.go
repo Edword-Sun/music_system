@@ -23,16 +23,17 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 
 func (h *UserHandler) Init(engine *gin.Engine) {
 	g := engine.Group("/user")
-	g.GET("/:id", h.FindUser)
-	g.POST("/", h.CreateUser)
-	g.PUT("/:id", h.UpdateUser)
-	g.DELETE("/:id", h.DeleteUser)
+	{
+		g.GET("/", h.FindUser)
+		g.POST("/", h.CreateUser)
+		g.PUT("/:id", h.UpdateUser)
+		g.DELETE("/:id", h.DeleteUser)
+	}
+
 }
 
 func (h *UserHandler) FindUser(c *gin.Context) {
-	id := c.Param("id")
 	var user model.User
-	user.ID = id
 
 	if err := c.ShouldBindJSON(&user); err != nil && err.Error() != "EOF" {
 		fmt.Println("error: ", err.Error())

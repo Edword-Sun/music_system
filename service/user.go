@@ -22,8 +22,8 @@ func NewUserService(userRepo *repository.UserRepository) *UserService {
 
 func (svc *UserService) CreateUser(user *model.User) (error, string) {
 	user.ID = uuid.NewV4().String()
-	user.CreatedTime = time.Now()
-	user.UpdatedTime = time.Now()
+	user.CreateTime = time.Now()
+	user.UpdateTime = time.Now()
 
 	err := svc.userRepo.Create(user)
 	if err != nil {
