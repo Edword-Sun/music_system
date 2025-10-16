@@ -2,11 +2,11 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+
 	"music_system/config"
 	"music_system/repository"
-	"music_system/service"
-
 	"music_system/router"
+	"music_system/service"
 )
 
 func main() {
@@ -16,17 +16,22 @@ func main() {
 	r := gin.Default()
 
 	// Initialize repository
-	userRepo := repository.NewUserRepository()
+	userRepo := repository.NewUserRepository(config.DB)
+	musicRepo := repository.NewMusicRepository(config.DB)
 
 	// Initialize services
 	userService := service.NewUserService(userRepo)
+	musicService := service.NewMusicService(musicRepo)
 
 	// Initialize handlers and register routes
 	healthHandler := router.NewHealthHandler()
+
 	userHandler := router.NewUserHandler(userService)
+	musicHandler := router.NewMusicHandler(musicService)
 
 	healthHandler.Init(r)
 	userHandler.Init(r)
+	musicHandler.Init(r)
 
 	r.Run(":8080") // listen and serve on 0.0.0.0:8080
 }
