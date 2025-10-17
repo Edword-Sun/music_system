@@ -8,6 +8,7 @@ CREATE TABLE `user` (
     `create_time` DATETIME NOT NULL,
     `update_time` DATETIME NOT NULL
 );
+ALTER TABLE `user` ADD COLUMN `auth` INT NOT NULL DEFAULT 3;
 
 -- 2025-10-16
 CREATE TABLE music (

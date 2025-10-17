@@ -1,0 +1,122 @@
+/* 全局样式 */
+:root {
+  --spotify-green: #1DB954;
+  --netease-red: #E91E63;
+  --dark-bg: #121212;
+  --dark-card: #181818;
+  --dark-hover: #282828;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--dark-bg);
+  color: white;
+}
+
+/* 平滑过渡 */
+* {
+  transition: all 0.2s ease-in-out;
+}
+
+/* 卡片悬停效果 */
+.MuiCard-root {
+  background-color: var(--dark-card) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.MuiCard-root:hover {
+  background-color: var(--dark-hover) !important;
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* 按钮悬停效果 */
+.MuiButton-containedPrimary {
+  background-color: var(--spotify-green) !important;
+}
+
+.MuiButton-containedPrimary:hover {
+  background-color: #1ed760 !important;
+  transform: scale(1.02);
+}
+
+.MuiButton-containedError {
+  background-color: var(--netease-red) !important;
+}
+
+.MuiButton-containedError:hover {
+  background-color: #ff1744 !important;
+  transform: scale(1.02);
+}
+
+/* 输入框焦点样式 */
+.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: var(--spotify-green) !important;
+  border-width: 2px;
+}
+
+/* 表格样式 */
+.MuiTableRow-root {
+  transition: background-color 0.2s ease;
+}
+
+.MuiTableRow-root:hover {
+  background-color: var(--dark-hover) !important;
+}
+
+/* 图标按钮样式 */
+.MuiIconButton-root {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.MuiIconButton-root:hover {
+  color: white !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--dark-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--spotify-green);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1ed760;
+}
+
+/* 加载动画 */
+.MuiCircularProgress-root {
+  color: var(--spotify-green) !important;
+}
+
+/* 分割线样式 */
+.MuiDivider-root {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 标签页指示器 */
+.MuiTabs-indicator {
+  background-color: var(--spotify-green) !important;
+  height: 3px !important;
+}
+
+/* 文本选中样式 */
+::selection {
+  background-color: var(--spotify-green);
+  color: white;
+}
