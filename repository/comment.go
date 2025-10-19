@@ -89,8 +89,8 @@ func (repo *CommentRepository) UpdateComment(comment *model.Comment, updateFilte
 	return nil
 }
 
-func (repo *CommentRepository) DeleteComment(deleteFilter *filter.DeleteComment) error {
-	if deleteFilter == nil || len(deleteFilter.ID) == 0 {
+func (repo *CommentRepository) DeleteComment(deleteFilter filter.DeleteComment) error {
+	if len(deleteFilter.ID) == 0 {
 		log.Println("删除失败：必须提供有效的 ID")
 		return errors.New("删除失败：必须提供有效的 ID")
 	}
