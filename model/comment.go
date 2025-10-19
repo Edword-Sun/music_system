@@ -8,6 +8,7 @@ import (
 
 // Comment 评论
 type Comment struct {
+	ID        string `gorm:"primarykey type:text;default:(UUID())" json:"id"`
 	UserID    string `gorm:"type:text;index" json:"user_id"`
 	MusicID   string `gorm:"type:text;index" json:"music_id"`
 	CommentID string `gorm:"type:text;index" json:"comment_id"` // 如果是评论的评论，就可以用这个ID

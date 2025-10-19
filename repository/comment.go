@@ -65,20 +65,18 @@ func (repo *CommentRepository) FindComment(findComment filter.FindComment) (erro
 
 }
 
-func (repo *CommentRepository) UpdateComment(comment *model.Comment, updateFilter filter.UpdateComment) error {
+func (repo *CommentRepository) UpdateComment(comment *model.Comment) error {
 	if comment == nil {
 		log.Println("error: 空指针comment")
 		return errors.New("空指针 comment")
 	}
-	if len(updateFilter.ID) == 0 {
+	if len(comment.ID) == 0 {
 		log.Println("更新失败：必须提供 ID")
 		return errors.New("更新失败：必须提供 ID")
 	}
 
 	query := repo.db.Model(comment)
-	if len(updateFilter.ID) > 0 {
-		query = query.Where("id = ?", updateFilter.ID)
-	}
+	query = query.Where("id = ?", comment.ID)
 
 	err := query.Updates(comment).Error
 	if err != nil {

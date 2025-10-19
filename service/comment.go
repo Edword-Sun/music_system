@@ -38,8 +38,8 @@ func (svc *CommentService) FindComment(commentFilter filter.FindComment) (error,
 	return nil, data
 }
 
-func (svc *CommentService) UpdateComment(comment *model.Comment, updateComment filter.UpdateComment) error {
-	err := svc.commentRepo.UpdateComment(comment, updateComment)
+func (svc *CommentService) UpdateComment(comment *model.Comment) error {
+	err := svc.commentRepo.UpdateComment(comment)
 	if err != nil {
 		log.Println("err: ", err.Error())
 		return err
