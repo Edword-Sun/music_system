@@ -21,3 +21,26 @@ CREATE TABLE music (
     create_time DATETIME NOT NULL,
     update_time DATETIME NOT NULL
 );
+
+-- 2025-10-20
+CREATE TABLE `comment` (
+  `id` VARCHAR(255) PRIMARY KEY DEFAULT (UUID()),
+  `user_id` TEXT NOT NULL,
+  `music_id` TEXT NOT NULL,
+  `comment_id` TEXT NOT NULL,
+  `content` TEXT NOT NULL,
+  `create_time` DATETIME NOT NULL,
+  `update_time` DATETIME NOT NULL
+);
+
+CREATE TABLE `user_action_properties` (
+  `id` VARCHAR(255) PRIMARY KEY DEFAULT (UUID()),
+  `user_id` TEXT NOT NULL,
+  `music_id` TEXT NOT NULL,
+  `thumb` BOOLEAN NOT NULL,
+  `un_thumb` BOOLEAN NOT NULL,
+  `collected` BOOLEAN NOT NULL,
+  `share` BOOLEAN NOT NULL,
+  `create_time` DATETIME NOT NULL,
+  `update_time` DATETIME NOT NULL
+);
