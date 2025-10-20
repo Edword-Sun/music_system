@@ -2,7 +2,6 @@ package router
 
 import (
 	"log"
-	"music_system/tool/filter"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,6 +10,7 @@ import (
 	"music_system/model"
 	"music_system/service"
 	"music_system/tool"
+	"music_system/tool/filter"
 )
 
 type UserActionPropertiesHandler struct {
