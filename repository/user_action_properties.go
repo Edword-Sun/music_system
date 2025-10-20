@@ -21,7 +21,7 @@ func NewUserActionProperties(db *gorm.DB) *UserActionPropertiesRepository {
 	}
 }
 
-func (repo *UserActionPropertiesRepository) Create(UAP *model.UserActionProperties) error {
+func (repo *UserActionPropertiesRepository) CreateUserActionProperties(UAP *model.UserActionProperties) error {
 	query := repo.db.Model(UAP)
 	err := query.Create(UAP).Error
 	if err != nil {
@@ -32,7 +32,7 @@ func (repo *UserActionPropertiesRepository) Create(UAP *model.UserActionProperti
 	return nil
 }
 
-func (repo *UserActionPropertiesRepository) Find(findUAP filter.FindUserActionProperties) (error, []*model.UserActionProperties) {
+func (repo *UserActionPropertiesRepository) FindUserActionProperties(findUAP filter.FindUserActionProperties) (error, []*model.UserActionProperties) {
 	var data []*model.UserActionProperties
 	query := repo.db.Model(&model.UserActionProperties{})
 
@@ -77,7 +77,7 @@ func (repo *UserActionPropertiesRepository) Find(findUAP filter.FindUserActionPr
 
 }
 
-func (repo *UserActionPropertiesRepository) Update(UAP *model.UserActionProperties) error {
+func (repo *UserActionPropertiesRepository) UpdateUserActionProperties(UAP *model.UserActionProperties) error {
 	if UAP == nil {
 		log.Println("error: 空指针 user_action_properties")
 		return errors.New("空指针 user_action_properties")
@@ -99,7 +99,7 @@ func (repo *UserActionPropertiesRepository) Update(UAP *model.UserActionProperti
 	return nil
 }
 
-func (repo *UserActionPropertiesRepository) Delete(deleteUAP filter.DeleteUserActionProperties) error {
+func (repo *UserActionPropertiesRepository) DeleteUserActionProperties(deleteUAP filter.DeleteUserActionProperties) error {
 	if len(deleteUAP.ID) == 0 {
 		log.Println("删除失败：必须提供有效的 ID")
 		return errors.New("删除失败：必须提供有效的 ID")

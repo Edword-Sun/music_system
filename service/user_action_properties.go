@@ -1,13 +1,28 @@
 package service
 
-import "music_system/repository"
+import (
+	"log"
+
+	"music_system/model"
+	"music_system/repository"
+)
 
 type UserActionPropertiesService struct {
-	uapRepo *repository.UserActionPropertiesRepository
+	UserActionPropertiesRepository *repository.UserActionPropertiesRepository
 }
 
-func NewUserActionPropertiesService(uapRepo *repository.UserActionPropertiesRepository) *UserActionPropertiesService {
+func NewUserActionPropertiesService(UAPRepo *repository.UserActionPropertiesRepository) *UserActionPropertiesService {
 	return &UserActionPropertiesService{
-		uapRepo: uapRepo,
+		UserActionPropertiesRepository: UAPRepo,
 	}
+}
+
+func (svc *UserActionPropertiesService) CreateUserActionProperties(UAP *model.UserActionProperties) error {
+	err := svc.UserActionPropertiesRepository.CreateUserActionProperties(UAP)
+	if err != nil {
+		log.Println("err: ", err.Error())
+		return err
+	}
+
+	return nil
 }
