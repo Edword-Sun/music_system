@@ -9,9 +9,9 @@ type FindComment struct {
 	EndTime   int64
 }
 
-type UpdateComment struct {
-	ID string
-}
+//type UpdateComment struct {
+//	ID string
+//}
 
 type DeleteComment struct {
 	ID string
