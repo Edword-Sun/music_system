@@ -1,7 +1,10 @@
 package service
 
 import (
+	"errors"
 	"log"
+
+	"gorm.io/gorm"
 
 	"music_system/model"
 	"music_system/repository"
@@ -30,7 +33,7 @@ func (svc *CommentService) CreateComment(comment *model.Comment) error {
 
 func (svc *CommentService) FindComment(commentFilter filter.FindComment) (error, []*model.Comment) {
 	err, data := svc.commentRepo.FindComment(commentFilter)
-	if err != nil {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		log.Println("err: ", err.Error())
 		return err, nil
 	}

@@ -26,8 +26,8 @@ func NewCommentHandler(commentService *service.CommentService) *CommentHandler {
 func (h *CommentHandler) Init(engine *gin.Engine) {
 	g := engine.Group("/comment")
 	{
-		g.GET("", h.CreateComment)
-		g.POST("", h.FindComment)
+		g.GET("", h.FindComment)
+		g.POST("", h.CreateComment)
 		g.PUT("", h.UpdateComment)
 		g.DELETE("", h.DeleteComment)
 	}
