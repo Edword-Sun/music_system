@@ -23,8 +23,8 @@ func NewUserActionPropertiesHandler(UAPSvc *service.UserActionPropertiesService)
 	}
 }
 
-func (h *UserActionPropertiesHandler) Init(g *gin.Engine) {
-	g.Group("/uap")
+func (h *UserActionPropertiesHandler) Init(engine *gin.Engine) {
+	g := engine.Group("/uap")
 	{
 		g.GET("", h.CreateUserActionProperties)
 		g.POST("", h.CreateUserActionProperties)

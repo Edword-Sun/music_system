@@ -23,8 +23,8 @@ func NewCommentHandler(commentService *service.CommentService) *CommentHandler {
 	}
 }
 
-func (h *CommentHandler) Init(g *gin.Engine) {
-	g.Group("/comment")
+func (h *CommentHandler) Init(engine *gin.Engine) {
+	g := engine.Group("/comment")
 	{
 		g.GET("", h.CreateComment)
 		g.POST("", h.FindComment)
