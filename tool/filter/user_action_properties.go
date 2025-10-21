@@ -1,26 +1,26 @@
 package filter
 
 type FindUserActionProperties struct {
-	ID      string
-	UserID  string
-	MusicID string
+	ID      string `json:"id"`
+	UserID  string `json:"user_id"`
+	MusicID string `json:"music_id"`
 
-	IsActiveThumb bool
-	Thumb         bool
+	IsActiveThumb bool `json:"is_active_thumb"`
+	Thumb         bool `json:"thumb"`
 
-	IsActiveUnThumb bool
-	UnThumb         bool
+	IsActiveUnThumb bool `json:"is_active_un_thumb"`
+	UnThumb         bool `json:"un_thumb"`
 
-	IsActiveCollected bool
-	Collected         bool
+	IsActiveCollected bool `json:"is_active_collected"`
+	Collected         bool `json:"collected"`
 
-	IsActiveShare bool
-	Share         bool
+	IsActiveShare bool `json:"is_active_share"`
+	Share         bool `json:"share"`
 
-	StartTime int64
-	EndTime   int64
+	StartTime int64 `json:"start_time"`
+	EndTime   int64 `json:"end_time"`
 }
 
 type DeleteUserActionProperties struct {
-	ID string
+	ID string `json:"id"`
 }
