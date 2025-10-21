@@ -20,12 +20,14 @@ func main() {
 	musicRepo := repository.NewMusicRepository(config.DB)
 	commentRepo := repository.NewCommentRepository(config.DB)
 	userActionPropertiesRepo := repository.NewUserActionProperties(config.DB)
+	musicHistoryRepository := repository.NewMusicHistoryRepository(config.DB)
 
 	// Initialize services
 	userService := service.NewUserService(userRepo)
 	musicService := service.NewMusicService(musicRepo)
 	commentService := service.NewCommentService(commentRepo)
 	userActionPropertiesService := service.NewUserActionPropertiesService(userActionPropertiesRepo)
+	musicHistoryService := service.NewMusicHistoryService(musicHistoryRepository)
 
 	// Initialize handlers and register routes
 	healthHandler := router.NewHealthHandler()
@@ -34,12 +36,14 @@ func main() {
 	musicHandler := router.NewMusicHandler(musicService)
 	commentHandler := router.NewCommentHandler(commentService)
 	userActionPropertiesHandler := router.NewUserActionPropertiesHandler(userActionPropertiesService)
+	musicHistoryHandler := router.NewMusicHistoryHandler(musicHistoryService)
 
 	healthHandler.Init(r)
 	userHandler.Init(r)
 	musicHandler.Init(r)
 	commentHandler.Init(r)
 	userActionPropertiesHandler.Init(r)
+	musicHistoryHandler.Init(r)
 
 	r.Run(":8080") // listen and serve on 0.0.0.0:8080
 }
