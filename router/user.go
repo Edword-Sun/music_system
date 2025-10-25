@@ -45,12 +45,28 @@ func (h *UserHandler) FindUser(c *gin.Context) {
 		return
 	}
 
+	if user.ID == "" {
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "Bad Request",
+			Body:    gin.H{"error": "User ID is required"},
+		})
+		return
+	}
+
 	err, getUser := h.userService.FindUser(&user)
 	if err != nil {
 		fmt.Println("error: ", err.Error())
 		c.JSON(http.StatusOK, tool.Response{
 			Message: "Internal Server Error",
 			Body:    gin.H{"error": err.Error()},
+		})
+		return
+	}
+
+	if getUser == nil {
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "不存在",
+			Body:    "",
 		})
 		return
 	}

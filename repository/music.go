@@ -33,23 +33,23 @@ func (repo *MusicRepository) Create(md *model.Music) error {
 func (repo *MusicRepository) Find(music *model.Music) (error, *model.Music) {
 	var data model.Music
 	query := repo.db.Model(music)
-	hasCondition := false
+	//hasCondition := false
 	if len(music.ID) > 0 {
 		query = query.Where("id = ?", music.ID)
-		hasCondition = true
+		//hasCondition = true
 	}
 	if len(music.Title) > 0 {
 		query = query.Where("title = ?", music.Title)
-		hasCondition = true
+		//hasCondition = true
 	}
 	if len(music.SingerName) > 0 {
 		query = query.Where("singer_name = ?", music.SingerName)
-		hasCondition = true
+		//hasCondition = true
 	}
 
-	if !hasCondition {
-		return errors.New("no search criteria provided"), nil
-	}
+	//if !hasCondition {
+	//	return errors.New("no search criteria provided"), nil
+	//}
 
 	err := query.First(&data).Error
 	if err != nil {
