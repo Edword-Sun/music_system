@@ -2,6 +2,7 @@ package router
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,6 +10,7 @@ import (
 	"music_system/model"
 	"music_system/service"
 	"music_system/tool"
+	"music_system/tool/filter"
 )
 
 type MusicHandler struct {
@@ -25,11 +27,46 @@ func (h *MusicHandler) Init(engine *gin.Engine) {
 	g := engine.Group("/music")
 	{
 		g.GET("/", h.FindMusic)
+		g.POST("/list", h.ListMusic)
+
 		g.POST("/", h.CreateMusic)
 		g.PUT("/", h.UpdateMusic)
 		g.DELETE("/:id", h.DeleteMusic)
 	}
 
+}
+
+func (h *MusicHandler) ListMusic(c *gin.Context) {
+	var condition filter.ListMusic
+	err := c.ShouldBindJSON(&condition)
+	if err != nil {
+		log.Println("参数错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body:    nil,
+		})
+		return
+	}
+
+	offset := (condition.Page - 1) * condition.Size
+
+	data, total, err := h.musicService.ListMusics(offset, condition.Size)
+	if err != nil {
+		fmt.Println("list music 错误", err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "list music 错误",
+			Body:    gin.H{"error": err.Error()},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "list music 成功",
+		Body: gin.H{
+			"total": total,
+			"data":  data,
+		},
+	})
 }
 
 func (h *MusicHandler) FindMusic(c *gin.Context) {

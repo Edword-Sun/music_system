@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+
 	uuid "github.com/satori/go.uuid"
 
 	"music_system/model"
@@ -58,4 +59,13 @@ func (svc *MusicService) DeleteMusic(music *model.Music) error {
 		return err
 	}
 	return nil
+}
+
+func (svc *MusicService) ListMusics(offset, limit int) ([]model.Music, int64, error) {
+	musics, total, err := svc.musicRepo.List(offset, limit)
+	if err != nil {
+		fmt.Println("svc list musics 错误")
+		return nil, 0, err
+	}
+	return musics, total, nil
 }

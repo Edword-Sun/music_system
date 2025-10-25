@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"gorm.io/gorm"
 
@@ -82,4 +83,24 @@ func (repo *MusicRepository) Delete(music *model.Music) error {
 		return errors.New("内部错误")
 	}
 	return nil
+}
+
+// List retrieves a list of music records with pagination.
+func (repo *MusicRepository) List(offset, limit int) ([]model.Music, int64, error) {
+	var musics []model.Music
+	var total int64
+
+	// Count total records
+	if err := repo.db.Model(&model.Music{}).Count(&total).Error; err != nil {
+		log.Println("err", err)
+		return nil, 0, err
+	}
+
+	// Retrieve paginated records
+	if err := repo.db.Offset(offset).Limit(limit).Find(&musics).Error; err != nil {
+		log.Println("err", err)
+		return nil, 0, errors.New("内部错误")
+	}
+
+	return musics, total, nil
 }
