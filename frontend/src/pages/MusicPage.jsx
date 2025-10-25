@@ -26,7 +26,7 @@ import UserActionPropertiesSection from '../components/UserActionPropertiesSecti
 const MusicPage = () => {
   const [musicList, setMusicList] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
-  const [dialogMode, setDialogMode] = useState('create'); // 'create' or 'edit'
+  const [dialogMode, setDialogMode] = useState('create');
   const [formData, setFormData] = useState({
     id: '',
     title: '',

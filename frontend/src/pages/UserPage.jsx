@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -36,10 +36,11 @@ const UserPage = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
-  const [dialogMode, setDialogMode] = useState('create'); // 'create' or 'edit'
+  const [dialogMode, setDialogMode] = useState('create');
   const [selectedUser, setSelectedUser] = useState(null);
   const [formData, setFormData] = useState({
-    username: '',
+    name: '',
+    account: '',
     password: '',
     email: '',
   });
@@ -48,6 +49,11 @@ const UserPage = () => {
     message: '',
     severity: 'success',
   });
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   // 处理表单输入变化
   const handleInputChange = (e) => {

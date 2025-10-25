@@ -4,6 +4,7 @@ import { ThemeProvider, createTheme } from '@mui/material';
 import HomePage from './pages/HomePage';
 import UserPage from './pages/UserPage';
 import MusicPage from './pages/MusicPage';
+import ProfilePage from './pages/ProfilePage';
 
 // 创建 Spotify 风格的暗色主题
 const theme = createTheme({
@@ -143,6 +144,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/user" element={<UserPage />} />
           <Route path="/music" element={<MusicPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
         </Routes>
       </Router>
     </ThemeProvider>
