@@ -57,10 +57,7 @@ export async function findUser(criteria) {
   return request(`/user/?${query}`, { method: 'GET' });
 }
 export async function findMusic(criteria) {
-  // 后端FindMusic为GET+JSON体，浏览器限制导致不可直接调用
-  // 这里提示限制并返回null，建议后端改为支持查询参数或POST到查询端点
-  console.warn('FindMusic在浏览器中受限：GET不能携带JSON体。请通过后端改造或使用curl等工具。')
-  return { message: '浏览器限制：GET不能携带JSON体，无法调用FindMusic', body: null }
+  return request('/music/', { method: 'POST', json: criteria });
 }
 
 // 评论
@@ -77,10 +74,7 @@ export async function deleteComment(id) {
 }
 
 export async function findComment(criteria) {
-  // 后端FindComment为GET+JSON体，浏览器限制导致不可直接调用
-  // 这里提示限制并返回null，建议后端改为支持查询参数或POST到查询端点
-  console.warn('FindComment在浏览器中受限：GET不能携带JSON体。请通过后端改造或使用curl等工具。')
-  return { message: '浏览器限制：GET不能携带JSON体，无法调用FindComment', body: null }
+  return request('/comment/', { method: 'POST', json: criteria });
 }
 
 // 用户操作属性
@@ -97,10 +91,7 @@ export async function deleteUserActionProperties(id) {
 }
 
 export async function findUserActionProperties(criteria) {
-  // 后端FindUserActionProperties为GET+JSON体，浏览器限制导致不可直接调用
-  // 这里提示限制并返回null，建议后端改为支持查询参数或POST到查询端点
-  console.warn('FindUserActionProperties在浏览器中受限：GET不能携带JSON体。请通过后端改造或使用curl等工具。')
-  return { message: '浏览器限制：GET不能携带JSON体，无法调用FindUserActionProperties', body: null }
+  return request('/user_action_properties/', { method: 'POST', json: criteria });
 }
 
 export const listMusics = (params) => request('/music/list', { method: 'POST', json: params });
