@@ -2,6 +2,7 @@ package router
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -25,6 +26,8 @@ func (h *UserHandler) Init(engine *gin.Engine) {
 	g := engine.Group("/user")
 	{
 		g.GET("/", h.FindUser)
+		g.GET("/list/", h.ListUser)
+
 		g.POST("/", h.CreateUser)
 		g.PUT("/:id", h.UpdateUser)
 		g.DELETE("/:id", h.DeleteUser)
@@ -153,5 +156,24 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, tool.Response{
 		Message: "删除用户成功",
 		Body:    "",
+	})
+}
+
+func (h *UserHandler) ListUser(c *gin.Context) {
+	data, total, err := h.userService.ListUsers()
+	if err != nil {
+		log.Println("list user 错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "list user 错误",
+			Body:    gin.H{"error": err.Error()},
+		})
+	}
+
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "list user 成功",
+		Body: gin.H{
+			"total": total,
+			"data":  data,
+		},
 	})
 }

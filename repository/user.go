@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"gorm.io/gorm"
 
@@ -56,6 +57,20 @@ func (repo *UserRepository) Find(user *model.User) (error, *model.User) {
 		return errors.New("内部错误"), nil
 	}
 	return nil, &data
+}
+
+func (repo *UserRepository) List() ([]*model.User, int64, error) {
+	var data []*model.User
+	var total int64
+
+	query := repo.db.Model(&model.User{})
+
+	err := query.Find(data).Count(&total).Error
+	if err != nil {
+		log.Println("err: ", err)
+		return nil, 0, errors.New("内部错误")
+	}
+	return data, total, nil
 }
 
 // update

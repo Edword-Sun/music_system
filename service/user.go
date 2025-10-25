@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
@@ -60,4 +61,14 @@ func (svc *UserService) DeleteUser(user *model.User) error {
 		return err
 	}
 	return nil
+}
+
+func (svc *UserService) ListUsers() ([]*model.User, int64, error) {
+	users, total, err := svc.userRepo.List()
+	if err != nil {
+		log.Println("列表查找错误")
+		return nil, 0, err
+	}
+
+	return users, total, nil
 }
