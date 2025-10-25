@@ -160,6 +160,8 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 }
 
 func (h *UserHandler) ListUser(c *gin.Context) {
+	// page size
+
 	data, total, err := h.userService.ListUsers()
 	if err != nil {
 		log.Println("list user 错误")
