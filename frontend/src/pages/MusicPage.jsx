@@ -19,7 +19,7 @@ import {
   Alert,
 } from '@mui/material';
 import { PlayArrow as PlayArrowIcon, Favorite as FavoriteIcon, Share as ShareIcon, Edit as EditIcon, Delete as DeleteIcon, Star as StarIcon } from '@mui/icons-material';
-import { createMusic, findMusic, updateMusic, deleteMusic } from '../api/client';
+import { createMusic, findMusic, updateMusic, deleteMusic, listMusics } from '../api/client';
 import CommentSection from '../components/CommentSection';
 import UserActionPropertiesSection from '../components/UserActionPropertiesSection';
 
@@ -54,8 +54,9 @@ const MusicPage = () => {
 
   const fetchMusic = async () => {
     try {
-      const response = await findMusic({});
-      setMusicList(response.data || []);
+      const response = await listMusics({ page: 1, size: 10 }); // Default to page 1, size 10 for now
+      setMusicList(response.body.data || []);
+      // If you need to use total, you can access it via response.body.total
     } catch (error) {
       showSnackbar(error.message || '获取音乐失败', 'error');
     }
@@ -118,7 +119,7 @@ const MusicPage = () => {
 
   const handleDelete = async (id) => {
     try {
-      await deleteMusic({ id });
+      await deleteMusic(id);
       showSnackbar('音乐删除成功', 'success');
       fetchMusic();
     } catch (error) {

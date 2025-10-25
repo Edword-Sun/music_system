@@ -23,14 +23,17 @@ import {
   Card,
   CardContent,
   Divider,
+  TablePagination,
+  InputAdornment,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   ArrowBack as ArrowBackIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
-import { createUser, updateUser, deleteUser, findUser } from '../api/client';
+import { createUser, updateUser, deleteUser, findUser, listUsers } from '../api/client';
 
 const UserPage = () => {
   const navigate = useNavigate();
@@ -50,6 +53,8 @@ const UserPage = () => {
     severity: 'success',
   });
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   useEffect(() => {
     fetchUsers();
@@ -141,11 +146,27 @@ const UserPage = () => {
   // 搜索用户
   const handleSearch = async () => {
     try {
-      const response = await findUser({});
-      setUsers(response.data || []);
+      const response = await listUsers();
+      setUsers(response.body || []);
     } catch (error) {
       showSnackbar(error.message || '搜索失败，请重试', 'error');
     }
+  };
+
+  // 过滤用户列表
+  const filteredUsers = users.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // 分页处理
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
   };
 
   // 组件加载时搜索用户
@@ -170,10 +191,10 @@ const UserPage = () => {
         </Box>
 
         {/* 操作区 */}
-        <Card sx={{ mb: 4, bgcolor: '#181818' }}>
+        <Card sx={{ mb: 4, bgcolor: '#181818', borderRadius: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
           <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">用户列表</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>用户列表</Typography>
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
@@ -182,17 +203,38 @@ const UserPage = () => {
                   bgcolor: '#1DB954',
                   '&:hover': {
                     bgcolor: '#1ed760',
+                    transform: 'scale(1.02)',
+                    transition: 'all 0.2s',
                   },
                 }}
               >
                 创建用户
               </Button>
             </Box>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="搜索用户名或邮箱..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: '#b3b3b3' }} />
+                  </InputAdornment>
+                ),
+                sx: {
+                  bgcolor: '#282828',
+                  borderRadius: 20,
+                  mb: 3,
+                },
+              }}
+            />
             <Divider sx={{ bgcolor: '#282828', my: 2 }} />
-            <TableContainer component={Paper} sx={{ bgcolor: 'transparent' }}>
+            <TableContainer component={Paper} sx={{ bgcolor: 'transparent', boxShadow: 'none' }}>
               <Table>
                 <TableHead>
-                  <TableRow>
+                  <TableRow sx={{ '& th': { color: '#b3b3b3', fontWeight: 600 } }}>
                     <TableCell>ID</TableCell>
                     <TableCell>用户名</TableCell>
                     <TableCell>邮箱</TableCell>
@@ -202,33 +244,54 @@ const UserPage = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {users.map((user) => (
-                    <TableRow key={user.id} hover>
-                      <TableCell>{user.id}</TableCell>
-                      <TableCell>{user.username}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{new Date(user.create_time).toLocaleString()}</TableCell>
-                      <TableCell>{new Date(user.update_time).toLocaleString()}</TableCell>
-                      <TableCell align="right">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleOpenEditDialog(user)}
-                          sx={{ color: '#1DB954' }}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(user.id)}
-                          sx={{ color: '#ff5252' }}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredUsers
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((user) => (
+                      <TableRow
+                        key={user.id}
+                        hover
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: 'rgba(255,255,255,0.05)',
+                            transition: 'background-color 0.2s',
+                          },
+                        }}
+                      >
+                        <TableCell>{user.id}</TableCell>
+                        <TableCell>{user.name}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{new Date(user.create_time).toLocaleString()}</TableCell>
+                        <TableCell>{new Date(user.update_time).toLocaleString()}</TableCell>
+                        <TableCell align="right">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenEditDialog(user)}
+                            sx={{ color: '#1DB954', '&:hover': { color: '#1ed760' } }}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDelete(user.id)}
+                            sx={{ color: '#ff5252', '&:hover': { color: '#ff1744' } }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                 </TableBody>
               </Table>
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25]}
+                component="div"
+                count={filteredUsers.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                sx={{ color: '#b3b3b3' }}
+              />
             </TableContainer>
           </CardContent>
         </Card>

@@ -8,8 +8,8 @@ const NavigationBar = () => {
   const menuItems = [
     { label: '首页', path: '/' },
     { label: '个人资料', path: '/profile' },
-    { label: '用户管理', path: '/user' },
-    { label: '音乐', path: '/music' },
+    { label: '用户管理', path: '/user/list' },
+    { label: '音乐', path: '/music/list' },
   ];
 
   return (
