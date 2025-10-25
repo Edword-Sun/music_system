@@ -55,12 +55,52 @@ export async function deleteMusic(id) {
 }
 
 export async function findUser(criteria) {
-  console.warn('FindUser在浏览器中受限：GET不能携带JSON体。请通过后端改造或使用curl等工具。')
-  return { message: '浏览器限制：GET不能携带JSON体，无法调用FindUser', body: null }
+  const query = new URLSearchParams(criteria).toString();
+  return request(`/user/?${query}`, { method: 'GET' });
 }
 export async function findMusic(criteria) {
   // 后端FindMusic为GET+JSON体，浏览器限制导致不可直接调用
   // 这里提示限制并返回null，建议后端改为支持查询参数或POST到查询端点
   console.warn('FindMusic在浏览器中受限：GET不能携带JSON体。请通过后端改造或使用curl等工具。')
   return { message: '浏览器限制：GET不能携带JSON体，无法调用FindMusic', body: null }
+}
+
+// 评论
+export async function createComment(comment) {
+  return request('/comment/', { method: 'POST', json: comment })
+}
+
+export async function updateComment(id, updates) {
+  return request(`/comment/${encodeURIComponent(id)}`, { method: 'PUT', json: updates })
+}
+
+export async function deleteComment(id) {
+  return request(`/comment/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export async function findComment(criteria) {
+  // 后端FindComment为GET+JSON体，浏览器限制导致不可直接调用
+  // 这里提示限制并返回null，建议后端改为支持查询参数或POST到查询端点
+  console.warn('FindComment在浏览器中受限：GET不能携带JSON体。请通过后端改造或使用curl等工具。')
+  return { message: '浏览器限制：GET不能携带JSON体，无法调用FindComment', body: null }
+}
+
+// 用户操作属性
+export async function createUserActionProperties(userActionProperties) {
+  return request('/user_action_properties/', { method: 'POST', json: userActionProperties })
+}
+
+export async function updateUserActionProperties(id, updates) {
+  return request(`/user_action_properties/${encodeURIComponent(id)}`, { method: 'PUT', json: updates })
+}
+
+export async function deleteUserActionProperties(id) {
+  return request(`/user_action_properties/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export async function findUserActionProperties(criteria) {
+  // 后端FindUserActionProperties为GET+JSON体，浏览器限制导致不可直接调用
+  // 这里提示限制并返回null，建议后端改为支持查询参数或POST到查询端点
+  console.warn('FindUserActionProperties在浏览器中受限：GET不能携带JSON体。请通过后端改造或使用curl等工具。')
+  return { message: '浏览器限制：GET不能携带JSON体，无法调用FindUserActionProperties', body: null }
 }

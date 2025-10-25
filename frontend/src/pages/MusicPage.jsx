@@ -1,50 +1,34 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Container,
   Typography,
-  TextField,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  IconButton,
+  Container,
+  Grid,
+  Card,
+  CardContent,
+  CardMedia,
+  CardActions,
   Dialog,
   DialogTitle,
   DialogContent,
+  TextField,
   DialogActions,
+  IconButton,
   Snackbar,
   Alert,
-  Card,
-  CardContent,
-  Divider,
-  Grid,
-  CardMedia,
-  CardActions,
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  ArrowBack as ArrowBackIcon,
-  PlayArrow as PlayArrowIcon,
-  Favorite as FavoriteIcon,
-  Share as ShareIcon,
-} from '@mui/icons-material';
-import { createMusic, updateMusic, deleteMusic, findMusic } from '../api/client';
+import { PlayArrow as PlayArrowIcon, Favorite as FavoriteIcon, Share as ShareIcon, Edit as EditIcon, Delete as DeleteIcon, Star as StarIcon } from '@mui/icons-material';
+import { createMusic, findMusic, updateMusic, deleteMusic } from '../api/client';
+import CommentSection from '../components/CommentSection';
+import UserActionPropertiesSection from '../components/UserActionPropertiesSection';
 
 const MusicPage = () => {
-  const navigate = useNavigate();
-  const [musics, setMusics] = useState([]);
+  const [musicList, setMusicList] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [dialogMode, setDialogMode] = useState('create'); // 'create' or 'edit'
-  const [selectedMusic, setSelectedMusic] = useState(null);
   const [formData, setFormData] = useState({
+    id: '',
     title: '',
     artist: '',
     album: '',
@@ -59,19 +43,28 @@ const MusicPage = () => {
     severity: 'success',
   });
 
-  // 处理表单输入变化
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  const [openCommentDialog, setOpenCommentDialog] = useState(false);
+  const [selectedMusicForComment, setSelectedMusicForComment] = useState(null);
+  const [openUserActionPropertiesDialog, setOpenUserActionPropertiesDialog] = useState(false);
+  const [selectedMusicForUserActionProperties, setSelectedMusicForUserActionProperties] = useState(null);
+
+  useEffect(() => {
+    fetchMusic();
+  }, []);
+
+  const fetchMusic = async () => {
+    try {
+      const response = await findMusic({});
+      setMusicList(response.data || []);
+    } catch (error) {
+      showSnackbar(error.message || '获取音乐失败', 'error');
+    }
   };
 
-  // 打开创建音乐对话框
   const handleOpenCreateDialog = () => {
     setDialogMode('create');
     setFormData({
+      id: '',
       title: '',
       artist: '',
       album: '',
@@ -83,11 +76,10 @@ const MusicPage = () => {
     setOpenDialog(true);
   };
 
-  // 打开编辑音乐对话框
   const handleOpenEditDialog = (music) => {
     setDialogMode('edit');
-    setSelectedMusic(music);
     setFormData({
+      id: music.id,
       title: music.title,
       artist: music.artist,
       album: music.album,
@@ -99,141 +91,131 @@ const MusicPage = () => {
     setOpenDialog(true);
   };
 
-  // 关闭对话框
   const handleCloseDialog = () => {
     setOpenDialog(false);
-    setSelectedMusic(null);
   };
 
-  // 显示提示消息
-  const showSnackbar = (message, severity = 'success') => {
-    setSnackbar({
-      open: true,
-      message,
-      severity,
-    });
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 关闭提示消息
-  const handleCloseSnackbar = () => {
-    setSnackbar((prev) => ({
-      ...prev,
-      open: false,
-    }));
-  };
-
-  // 提交表单
   const handleSubmit = async () => {
     try {
       if (dialogMode === 'create') {
         await createMusic(formData);
-        showSnackbar('音乐创建成功！');
+        showSnackbar('音乐创建成功', 'success');
       } else {
-        await updateMusic(selectedMusic.id, formData);
-        showSnackbar('音乐更新成功！');
+        await updateMusic(formData);
+        showSnackbar('音乐更新成功', 'success');
       }
+      fetchMusic();
       handleCloseDialog();
-      handleSearch();
     } catch (error) {
-      showSnackbar(error.message || '操作失败，请重试', 'error');
+      showSnackbar(error.message || '操作失败', 'error');
     }
   };
 
-  // 删除音乐
-  const handleDelete = async (musicId) => {
+  const handleDelete = async (id) => {
     try {
-      await deleteMusic(musicId);
-      showSnackbar('音乐删除成功！');
-      handleSearch();
+      await deleteMusic({ id });
+      showSnackbar('音乐删除成功', 'success');
+      fetchMusic();
     } catch (error) {
-      showSnackbar(error.message || '删除失败，请重试', 'error');
+      showSnackbar(error.message || '删除失败', 'error');
     }
   };
 
-  // 搜索音乐
-  const handleSearch = async () => {
-    try {
-      const response = await findMusic({});
-      setMusics(response.data || []);
-    } catch (error) {
-      showSnackbar(error.message || '搜索失败，请重试', 'error');
-    }
+  const showSnackbar = (message, severity) => {
+    setSnackbar({ open: true, message, severity });
   };
 
-  // 组件加载时搜索音乐
-  React.useEffect(() => {
-    handleSearch();
-  }, []);
+  const handleCloseSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
+  // 打开评论对话框
+  const handleOpenCommentDialog = (music) => {
+    setSelectedMusicForComment(music);
+    setOpenCommentDialog(true);
+  };
+
+  // 关闭评论对话框
+  const handleCloseCommentDialog = () => {
+    setOpenCommentDialog(false);
+    setSelectedMusicForComment(null);
+  };
+
+  // 打开用户操作属性对话框
+  const handleOpenUserActionPropertiesDialog = (music) => {
+    setSelectedMusicForUserActionProperties(music);
+    setOpenUserActionPropertiesDialog(true);
+  };
+
+  // 关闭用户操作属性对话框
+  const handleCloseUserActionPropertiesDialog = () => {
+    setOpenUserActionPropertiesDialog(false);
+    setSelectedMusicForUserActionProperties(null);
+  };
 
   return (
-    <Box sx={{ bgcolor: '#121212', minHeight: '100vh', color: 'white', pb: 4 }}>
+    <Box sx={{ flexGrow: 1, p: 3, backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
       <Container maxWidth="lg">
-        {/* 顶部导航 */}
-        <Box sx={{ pt: 2, pb: 4, display: 'flex', alignItems: 'center' }}>
-          <IconButton
-            onClick={() => navigate('/')}
-            sx={{ color: 'white', mr: 2 }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h4" component="h1">
-            音乐管理
-          </Typography>
-        </Box>
+        <Typography variant="h4" component="h1" gutterBottom sx={{ color: '#1DB954' }}>
+          音乐管理
+        </Typography>
+        <Button
+          variant="contained"
+          sx={{
+            mb: 3,
+            bgcolor: '#1DB954',
+            '&:hover': {
+              bgcolor: '#1ed760',
+            },
+          }}
+          onClick={handleOpenCreateDialog}
+        >
+          添加新音乐
+        </Button>
 
-        {/* 操作区 */}
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h6">音乐列表</Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleOpenCreateDialog}
-              sx={{
-                bgcolor: '#1DB954',
-                '&:hover': {
-                  bgcolor: '#1ed760',
-                },
-              }}
-            >
-              添加音乐
-            </Button>
-          </Box>
-
+        <Box sx={{ mt: 4 }}>
           <Grid container spacing={3}>
-            {musics.map((music) => (
-              <Grid item xs={12} sm={6} md={4} key={music.id}>
+            {musicList.map((music) => (
+              <Grid item key={music.id} xs={12} sm={6} md={4} lg={3}>
                 <Card
                   sx={{
-                    bgcolor: '#181818',
-                    transition: '0.3s',
+                    backgroundColor: '#282828',
+                    color: 'white',
                     '&:hover': {
-                      bgcolor: '#282828',
-                      transform: 'translateY(-4px)',
+                      backgroundColor: '#3a3a3a',
                     },
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
                   }}
                 >
                   <CardMedia
                     component="img"
-                    height="200"
-                    image={music.cover_url || 'https://i.scdn.co/image/ab67616d0000b273f7f74100d5cc850e01172cbf'}
+                    height="140"
+                    image={music.cover_url || 'https://via.placeholder.com/150'}
                     alt={music.title}
+                    sx={{ objectFit: 'cover' }}
                   />
-                  <CardContent>
-                    <Typography variant="h6" noWrap>
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography gutterBottom variant="h6" component="div" sx={{ color: '#1DB954' }}>
                       {music.title}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                      {music.artist}
+                    <Typography variant="body2" color="text.secondary" sx={{ color: '#b3b3b3' }}>
+                      {music.artist} - {music.album}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      专辑：{music.album}
+                    <Typography variant="body2" color="text.secondary" sx={{ color: '#b3b3b3' }}>
+                      流派: {music.genre}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      流派：{music.genre}
+                    <Typography variant="body2" color="text.secondary" sx={{ color: '#b3b3b3' }}>
+                      时长: {music.duration}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      时长：{music.duration}
+                    <Typography variant="body2" color="text.secondary" sx={{ color: '#b3b3b3' }}>
+                      发行日期: {music.release_date}
                     </Typography>
                   </CardContent>
                   <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
@@ -244,8 +226,11 @@ const MusicPage = () => {
                       <IconButton size="small" sx={{ color: 'white' }}>
                         <FavoriteIcon />
                       </IconButton>
-                      <IconButton size="small" sx={{ color: 'white' }}>
-                        <ShareIcon />
+                      <IconButton size="small" sx={{ color: 'white' }} onClick={() => handleOpenCommentDialog(music)}>
+                        <ShareIcon /> {/* Using ShareIcon as a placeholder for comment icon */}
+                      </IconButton>
+                      <IconButton size="small" sx={{ color: 'white' }} onClick={() => handleOpenUserActionPropertiesDialog(music)}>
+                        <StarIcon /> {/* Placeholder icon for user action properties */}
                       </IconButton>
                     </Box>
                     <Box>
@@ -383,6 +368,56 @@ const MusicPage = () => {
               }}
             >
               确定
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* 评论对话框 */}
+        <Dialog
+          open={openCommentDialog}
+          onClose={handleCloseCommentDialog}
+          PaperProps={{
+            sx: {
+              bgcolor: '#282828',
+              color: 'white',
+              minWidth: '400px',
+            },
+          }}
+        >
+          <DialogTitle>评论</DialogTitle>
+          <DialogContent>
+            {selectedMusicForComment && (
+              <CommentSection musicId={selectedMusicForComment.id} />
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseCommentDialog} sx={{ color: '#b3b3b3' }}>
+              关闭
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* 用户操作属性对话框 */}
+        <Dialog
+          open={openUserActionPropertiesDialog}
+          onClose={handleCloseUserActionPropertiesDialog}
+          PaperProps={{
+            sx: {
+              bgcolor: '#282828',
+              color: 'white',
+              minWidth: '400px',
+            },
+          }}
+        >
+          <DialogTitle>用户操作属性</DialogTitle>
+          <DialogContent>
+            {selectedMusicForUserActionProperties && (
+              <UserActionPropertiesSection musicId={selectedMusicForUserActionProperties.id} userId="test_user_id" />
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseUserActionPropertiesDialog} sx={{ color: '#b3b3b3' }}>
+              关闭
             </Button>
           </DialogActions>
         </Dialog>
