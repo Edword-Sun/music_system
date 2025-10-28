@@ -26,11 +26,11 @@ func NewMusicHandler(musicService *service.MusicService) *MusicHandler {
 func (h *MusicHandler) Init(engine *gin.Engine) {
 	g := engine.Group("/music")
 	{
-		g.POST("/", h.FindMusic)
+		g.POST("/find", h.FindMusic)
 		g.POST("/list", h.ListMusic)
 
-		g.POST("/", h.CreateMusic)
-		g.PUT("/", h.UpdateMusic)
+		g.POST("", h.CreateMusic)
+		g.PUT("", h.UpdateMusic)
 		g.DELETE("/:id", h.DeleteMusic)
 	}
 

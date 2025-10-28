@@ -3,6 +3,7 @@ package router
 import (
 	"fmt"
 	"log"
+	"music_system/tool/filter"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -25,11 +26,11 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 func (h *UserHandler) Init(engine *gin.Engine) {
 	g := engine.Group("/user")
 	{
-		g.GET("/", h.FindUser)
-		g.GET("/list/", h.ListUser)
+		g.POST("/find", h.FindUser)
+		g.POST("/list/", h.ListUser)
 
-		g.POST("/", h.CreateUser)
-		g.PUT("/:id", h.UpdateUser)
+		g.POST("", h.CreateUser)
+		g.PUT("", h.UpdateUser)
 		g.DELETE("/:id", h.DeleteUser)
 	}
 
@@ -110,10 +111,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 }
 
 func (h *UserHandler) UpdateUser(c *gin.Context) {
-	id := c.Param("id")
 	var user model.User
-	user.ID = id
-
 	if err := c.ShouldBindJSON(&user); err != nil && err.Error() != "EOF" {
 		fmt.Println("error: ", err.Error())
 		c.JSON(http.StatusOK, tool.Response{
@@ -160,15 +158,27 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 }
 
 func (h *UserHandler) ListUser(c *gin.Context) {
-	// page size
+	var condition filter.ListUser
 
-	data, total, err := h.userService.ListUsers()
+	if err := c.ShouldBindJSON(&condition); err != nil {
+		log.Println("参数错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body:    nil,
+		})
+		return
+	}
+
+	offset := (condition.Page - 1) * condition.Size
+
+	data, total, err := h.userService.ListUsers(offset, condition.Size)
 	if err != nil {
 		log.Println("list user 错误")
 		c.JSON(http.StatusOK, tool.Response{
 			Message: "list user 错误",
 			Body:    gin.H{"error": err.Error()},
 		})
+		return
 	}
 
 	c.JSON(http.StatusOK, tool.Response{

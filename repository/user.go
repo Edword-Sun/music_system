@@ -3,9 +3,8 @@ package repository
 import (
 	"errors"
 	"fmt"
-	"log"
-
 	"gorm.io/gorm"
+	"log"
 
 	"music_system/model"
 )
@@ -59,7 +58,7 @@ func (repo *UserRepository) Find(user *model.User) (error, *model.User) {
 	return nil, &data
 }
 
-func (repo *UserRepository) List() ([]*model.User, int64, error) {
+func (repo *UserRepository) List(offset, size int) ([]*model.User, int64, error) {
 	var data []*model.User
 	var total int64
 
@@ -70,6 +69,13 @@ func (repo *UserRepository) List() ([]*model.User, int64, error) {
 		log.Println("err: ", err)
 		return nil, 0, errors.New("内部错误")
 	}
+
+	err = query.Offset(offset).Limit(size).Find(&data).Error
+	if err != nil {
+		log.Println("err", err)
+		return nil, 0, errors.New("内部错误")
+	}
+
 	return data, total, nil
 }
 

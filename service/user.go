@@ -63,8 +63,8 @@ func (svc *UserService) DeleteUser(user *model.User) error {
 	return nil
 }
 
-func (svc *UserService) ListUsers() ([]*model.User, int64, error) {
-	users, total, err := svc.userRepo.List()
+func (svc *UserService) ListUsers(offset, size int) ([]*model.User, int64, error) {
+	users, total, err := svc.userRepo.List(offset, size)
 	if err != nil {
 		log.Println("列表查找错误")
 		return nil, 0, err

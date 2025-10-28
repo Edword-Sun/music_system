@@ -22,83 +22,74 @@ export async function checkHealth() {
   return request('/health', { method: 'GET' })
 }
 
-// 用户
+// 用户相关
 export async function createUser(user) {
-  return request('/user/', { method: 'POST', json: user })
+  return request('/user/add', { method: 'POST', json: user })
 }
 
-export async function updateUser(id, updates) {
-  return request(`/user/${encodeURIComponent(id)}`, { method: 'PUT', json: updates })
+export async function updateUser(user) {
+  return request('/user/', { method: 'PUT', json: user })
 }
 
 export async function deleteUser(id) {
   return request(`/user/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
-export async function findUserFirst() {
-  // 后端GET使用JSON体，浏览器不支持GET携带body，这里仅获取首条记录
-  return request('/user/', { method: 'GET' })
+export async function findUser(criteria) {
+  return request('/user/find', { method: 'POST', json: criteria });
 }
 
-// 音乐
+export async function listUsers(params) {
+  return request('/user/list/', { method: 'POST', json: params });
+}
+
+// 音乐相关
 export async function createMusic(music) {
   return request('/music/', { method: 'POST', json: music })
 }
 
-export async function updateMusic(updates) {
-  // 后端PUT "/music"，需要在体内包含id及更新字段
-  return request('/music', { method: 'PUT', json: updates })
+export async function updateMusic(music) {
+  return request('/music', { method: 'PUT', json: music })
 }
 
-
-
-export async function findUser(criteria) {
-  const query = new URLSearchParams(criteria).toString();
-  return request(`/user/?${query}`, { method: 'GET' });
-}
 export async function findMusic(criteria) {
-  return request('/music/', { method: 'POST', json: criteria });
-}
-
-// 评论
-export async function createComment(comment) {
-  return request('/comment/', { method: 'POST', json: comment })
-}
-
-export async function updateComment(id, updates) {
-  return request(`/comment/${encodeURIComponent(id)}`, { method: 'PUT', json: updates })
-}
-
-export async function deleteComment(id) {
-  return request(`/comment/${encodeURIComponent(id)}`, { method: 'DELETE' })
-}
-
-export async function findComment(criteria) {
-  return request('/comment/', { method: 'POST', json: criteria });
-}
-
-// 用户操作属性
-export async function createUserActionProperties(userActionProperties) {
-  return request('/user_action_properties/', { method: 'POST', json: userActionProperties })
-}
-
-export async function updateUserActionProperties(id, updates) {
-  return request(`/user_action_properties/${encodeURIComponent(id)}`, { method: 'PUT', json: updates })
-}
-
-export async function deleteUserActionProperties(id) {
-  return request(`/user_action_properties/${encodeURIComponent(id)}`, { method: 'DELETE' })
-}
-
-export async function findUserActionProperties(criteria) {
-  return request('/user_action_properties/', { method: 'POST', json: criteria });
+  return request('/music/find', { method: 'POST', json: criteria });
 }
 
 export const listMusics = (params) => request('/music/list', { method: 'POST', json: params });
 
 export const deleteMusic = (musicId) => request(`/music/${musicId}`, { method: 'DELETE' });
 
-// 用户列表
-export async function listUsers() {
-  return request('/user/list/', { method: 'GET' });
+// 评论相关
+export async function createComment(comment) {
+  return request('/comment/', { method: 'POST', json: comment })
+}
+
+export async function updateComment(comment) {
+  return request('/comment', { method: 'PUT', json: comment })
+}
+
+export async function deleteComment(id) {
+  return request('/comment', { method: 'DELETE', json: { ID: id } })
+}
+
+export async function findComment(criteria) {
+  return request('/comment/find', { method: 'POST', json: criteria });
+}
+
+// 用户操作属性相关
+export async function createUserActionProperties(userActionProperties) {
+  return request('/uap/', { method: 'POST', json: userActionProperties })
+}
+
+export async function updateUserActionProperties(userActionProperties) {
+  return request('/uap', { method: 'PUT', json: userActionProperties })
+}
+
+export async function deleteUserActionProperties(id) {
+  return request(`/uap/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export async function findUserActionProperties(criteria) {
+  return request('/uap/find', { method: 'POST', json: criteria });
 }

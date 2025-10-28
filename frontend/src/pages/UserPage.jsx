@@ -122,7 +122,7 @@ const UserPage = () => {
         await createUser(formData);
         showSnackbar('用户创建成功！');
       } else {
-        await updateUser(selectedUser.id, formData);
+        await updateUser({ ...formData, id: selectedUser.id });
         showSnackbar('用户更新成功！');
       }
       handleCloseDialog();
