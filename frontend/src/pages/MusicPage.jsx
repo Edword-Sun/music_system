@@ -22,20 +22,23 @@ import { PlayArrow as PlayArrowIcon, Favorite as FavoriteIcon, Share as ShareIco
 import { createMusic, findMusic, updateMusic, deleteMusic, listMusics } from '../api/client';
 import CommentSection from '../components/CommentSection';
 import UserActionPropertiesSection from '../components/UserActionPropertiesSection';
+import Pagination from '@mui/material/Pagination';
 
 const MusicPage = () => {
   const [musicList, setMusicList] = useState([]);
+  const [page, setPage] = useState(1);
+  const [size, setSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [sortOrder, setSortOrder] = useState('desc'); // Add sortOrder state
   const [openDialog, setOpenDialog] = useState(false);
   const [dialogMode, setDialogMode] = useState('create');
   const [formData, setFormData] = useState({
     id: '',
     title: '',
-    artist: '',
-    album: '',
-    genre: '',
-    duration: '',
-    release_date: '',
-    cover_url: '',
+    description: '',
+    content: '',
+    play_time: '',
+    singer_name: '',
   });
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -50,16 +53,25 @@ const MusicPage = () => {
 
   useEffect(() => {
     fetchMusic();
-  }, []);
+  }, [page, size, sortOrder]); // Add sortOrder to dependency array
 
   const fetchMusic = async () => {
     try {
-      const response = await listMusics({ page: 1, size: 10 }); // Default to page 1, size 10 for now
+      const response = await listMusics({
+        page: page,
+        size: size,
+        order_by: 'CreateTime',
+        order: sortOrder,
+      }); // Pass sort parameters
       setMusicList(response.body.data || []);
-      // If you need to use total, you can access it via response.body.total
+      setTotal(response.body.total || 0);
     } catch (error) {
       showSnackbar(error.message || '获取音乐失败', 'error');
     }
+  };
+
+  const handlePageChange = (event, value) => {
+    setPage(value);
   };
 
   const handleOpenCreateDialog = () => {
@@ -67,12 +79,10 @@ const MusicPage = () => {
     setFormData({
       id: '',
       title: '',
-      artist: '',
-      album: '',
-      genre: '',
-      duration: '',
-      release_date: '',
-      cover_url: '',
+      description: '',
+      content: '',
+      play_time: '',
+      singer_name: '',
     });
     setOpenDialog(true);
   };
@@ -82,12 +92,10 @@ const MusicPage = () => {
     setFormData({
       id: music.id,
       title: music.title,
-      artist: music.artist,
-      album: music.album,
-      genre: music.genre,
-      duration: music.duration,
-      release_date: music.release_date,
-      cover_url: music.cover_url,
+      description: music.description,
+      content: music.content,
+      play_time: music.play_time,
+      singer_name: music.singer_name,
     });
     setOpenDialog(true);
   };
@@ -207,16 +215,16 @@ const MusicPage = () => {
                       {music.title}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ color: '#b3b3b3' }}>
-                      {music.artist} - {music.album}
+                      描述: {music.description}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ color: '#b3b3b3' }}>
-                      流派: {music.genre}
+                      内容: {music.content}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ color: '#b3b3b3' }}>
-                      时长: {music.duration}
+                      播放时长: {music.play_time}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ color: '#b3b3b3' }}>
-                      发行日期: {music.release_date}
+                      歌手姓名: {music.singer_name}
                     </Typography>
                   </CardContent>
                   <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
@@ -257,6 +265,27 @@ const MusicPage = () => {
           </Grid>
         </Box>
 
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <Pagination
+            count={Math.ceil(total / size)}
+            page={page}
+            onChange={handlePageChange}
+            color="primary"
+            sx={{
+              '& .MuiPaginationItem-root': {
+                color: 'white',
+              },
+              '& .MuiPaginationItem-root.Mui-selected': {
+                bgcolor: '#1DB954',
+                color: 'white',
+                '&:hover': {
+                  bgcolor: '#1ed760',
+                },
+              },
+            }}
+          />
+        </Box>
+
         {/* 创建/编辑音乐对话框 */}
         <Dialog
           open={openDialog}
@@ -287,71 +316,47 @@ const MusicPage = () => {
             />
             <TextField
               margin="dense"
-              name="artist"
-              label="艺术家"
+              name="description"
+              label="描述"
               type="text"
               fullWidth
               variant="outlined"
-              value={formData.artist}
+              value={formData.description}
               onChange={handleInputChange}
               sx={{ mb: 2 }}
             />
             <TextField
               margin="dense"
-              name="album"
-              label="专辑"
+              name="content"
+              label="内容"
               type="text"
               fullWidth
               variant="outlined"
-              value={formData.album}
+              value={formData.content}
               onChange={handleInputChange}
               sx={{ mb: 2 }}
             />
             <TextField
               margin="dense"
-              name="genre"
-              label="流派"
+              name="play_time"
+              label="播放时长"
               type="text"
               fullWidth
               variant="outlined"
-              value={formData.genre}
+              value={formData.play_time}
               onChange={handleInputChange}
               sx={{ mb: 2 }}
             />
             <TextField
               margin="dense"
-              name="duration"
-              label="时长"
+              name="singer_name"
+              label="歌手姓名"
               type="text"
               fullWidth
               variant="outlined"
-              value={formData.duration}
+              value={formData.singer_name}
               onChange={handleInputChange}
               sx={{ mb: 2 }}
-            />
-            <TextField
-              margin="dense"
-              name="release_date"
-              label="发行日期"
-              type="date"
-              fullWidth
-              variant="outlined"
-              value={formData.release_date}
-              onChange={handleInputChange}
-              sx={{ mb: 2 }}
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
-            <TextField
-              margin="dense"
-              name="cover_url"
-              label="封面图片 URL"
-              type="text"
-              fullWidth
-              variant="outlined"
-              value={formData.cover_url}
-              onChange={handleInputChange}
             />
           </DialogContent>
           <DialogActions sx={{ p: 2 }}>
