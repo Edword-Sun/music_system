@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -55,10 +55,9 @@ const UserPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const [startTime, setStartTime] = useState(0);
+  const [endTime, setEndTime] = useState(0);
+  const [total, setTotal] = useState(0);
 
   // 处理表单输入变化
   const handleInputChange = (e) => {
@@ -73,7 +72,8 @@ const UserPage = () => {
   const handleOpenCreateDialog = () => {
     setDialogMode('create');
     setFormData({
-      username: '',
+      name: '',
+      account: '',
       password: '',
       email: '',
     });
@@ -85,7 +85,8 @@ const UserPage = () => {
     setDialogMode('edit');
     setSelectedUser(user);
     setFormData({
-      username: user.username,
+      name: user.name,
+      account: user.account,
       password: '',
       email: user.email,
     });
@@ -99,13 +100,13 @@ const UserPage = () => {
   };
 
   // 显示提示消息
-  const showSnackbar = (message, severity = 'success') => {
+  const showSnackbar = useCallback((message, severity = 'success') => {
     setSnackbar({
       open: true,
       message,
       severity,
     });
-  };
+  }, [setSnackbar]);
 
   // 关闭提示消息
   const handleCloseSnackbar = () => {
@@ -144,14 +145,20 @@ const UserPage = () => {
   };
 
   // 搜索用户
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     try {
-      const response = await listUsers();
-      setUsers(response.body || []);
+      const response = await listUsers({
+        page: page + 1,  // 修正分页参数从1开始
+        size: rowsPerPage,
+        start_time: startTime || undefined,
+        end_time: endTime || undefined
+      });
+      setUsers(response.body.data || []);
+      setTotal(response.body.total || 0);
     } catch (error) {
       showSnackbar(error.message || '搜索失败，请重试', 'error');
     }
-  };
+  }, [page, rowsPerPage, startTime, endTime, showSnackbar]);
 
   // 过滤用户列表
   const filteredUsers = users.filter(user =>
@@ -172,7 +179,7 @@ const UserPage = () => {
   // 组件加载时搜索用户
   React.useEffect(() => {
     handleSearch();
-  }, []);
+  }, [handleSearch]);
 
   return (
     <Box sx={{ bgcolor: '#121212', minHeight: '100vh', color: 'white', pb: 4 }}>
@@ -285,7 +292,7 @@ const UserPage = () => {
               <TablePagination
                 rowsPerPageOptions={[5, 10, 25]}
                 component="div"
-                count={filteredUsers.length}
+                count={total}
                 rowsPerPage={rowsPerPage}
                 page={page}
                 onPageChange={handleChangePage}
@@ -315,12 +322,12 @@ const UserPage = () => {
             <TextField
               autoFocus
               margin="dense"
-              name="username"
+              name="name"
               label="用户名"
               type="text"
               fullWidth
               variant="outlined"
-              value={formData.username}
+              value={formData.name}
               onChange={handleInputChange}
               sx={{ mb: 2 }}
             />

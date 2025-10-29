@@ -64,7 +64,7 @@ func (repo *UserRepository) List(offset, size int) ([]*model.User, int64, error)
 
 	query := repo.db.Model(&model.User{}).Order("create_time DESC")
 
-	err := query.Find(data).Count(&total).Error
+	err := query.Count(&total).Error
 	if err != nil {
 		log.Println("err: ", err)
 		return nil, 0, errors.New("内部错误")

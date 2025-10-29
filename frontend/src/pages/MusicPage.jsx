@@ -60,9 +60,7 @@ const MusicPage = () => {
       const response = await listMusics({
         page: page,
         size: size,
-        order_by: 'CreateTime',
-        order: sortOrder,
-      }); // Pass sort parameters
+      });
       setMusicList(response.body.data || []);
       setTotal(response.body.total || 0);
     } catch (error) {

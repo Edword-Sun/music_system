@@ -169,6 +169,16 @@ func (h *UserHandler) ListUser(c *gin.Context) {
 		})
 		return
 	}
+
+	// todo 整合判断条件
+	if condition.Size == 0 || condition.Page == 0 {
+		log.Println("参数错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body:    nil,
+		})
+		return
+	}
 	if condition.StartTime > condition.EndTime ||
 		(condition.StartTime == condition.EndTime &&
 			(condition.StartTime != 0 && condition.EndTime != 0)) {
