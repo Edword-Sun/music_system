@@ -33,7 +33,7 @@ func (repo *MusicRepository) Create(md *model.Music) error {
 // Find finds a record based on provided fields.
 func (repo *MusicRepository) Find(music *model.Music) (error, *model.Music) {
 	var data model.Music
-	query := repo.db.Model(music)
+	query := repo.db.Model(music).Order("create_time DESC")
 	//hasCondition := false
 	if len(music.ID) > 0 {
 		query = query.Where("id = ?", music.ID)
@@ -85,19 +85,21 @@ func (repo *MusicRepository) Delete(music *model.Music) error {
 	return nil
 }
 
-// List retrieves a list of music records with pagination.
+// List retrieves a list of music records with pagination and sorting.
 func (repo *MusicRepository) List(offset, limit int) ([]model.Music, int64, error) {
 	var musics []model.Music
 	var total int64
 
+	query := repo.db.Model(&model.Music{}).Order("create_time DESC")
+
 	// Count total records
-	if err := repo.db.Model(&model.Music{}).Count(&total).Error; err != nil {
+	if err := query.Count(&total).Error; err != nil {
 		log.Println("err", err)
 		return nil, 0, err
 	}
 
 	// Retrieve paginated records
-	if err := repo.db.Offset(offset).Limit(limit).Find(&musics).Error; err != nil {
+	if err := query.Offset(offset).Limit(limit).Find(&musics).Error; err != nil {
 		log.Println("err", err)
 		return nil, 0, errors.New("内部错误")
 	}

@@ -33,7 +33,7 @@ func (repo *UserRepository) Create(user *model.User) error {
 // find
 func (repo *UserRepository) Find(user *model.User) (error, *model.User) {
 	var data model.User
-	query := repo.db.Model(&model.User{})
+	query := repo.db.Model(&model.User{}).Order("create_time DESC")
 	if len(user.ID) > 0 {
 		query = query.Where("id = ?", user.ID)
 	}
@@ -62,7 +62,7 @@ func (repo *UserRepository) List(offset, size int) ([]*model.User, int64, error)
 	var data []*model.User
 	var total int64
 
-	query := repo.db.Model(&model.User{})
+	query := repo.db.Model(&model.User{}).Order("create_time DESC")
 
 	err := query.Find(data).Count(&total).Error
 	if err != nil {

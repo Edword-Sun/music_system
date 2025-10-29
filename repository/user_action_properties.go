@@ -34,7 +34,7 @@ func (repo *UserActionPropertiesRepository) CreateUserActionProperties(UAP *mode
 
 func (repo *UserActionPropertiesRepository) FindUserActionProperties(findUAP filter.FindUserActionProperties) (error, []*model.UserActionProperties) {
 	var data []*model.UserActionProperties
-	query := repo.db.Model(&model.UserActionProperties{})
+	query := repo.db.Model(&model.UserActionProperties{}).Order("create_time DESC")
 
 	if len(findUAP.ID) > 0 {
 		query = query.Where("id = ?", findUAP.ID)

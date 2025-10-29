@@ -34,7 +34,7 @@ func (repo *MusicHistoryRepository) CreateMusicHistory(musicHistory *model.Music
 
 func (repo *MusicHistoryRepository) FindMusicHistory(findMusicHistory filter.FindMusicHistory) (error, []*model.MusicHistory) {
 	var data []*model.MusicHistory
-	query := repo.db.Model(&model.MusicHistory{})
+	query := repo.db.Model(&model.MusicHistory{}).Order("create_time DESC")
 
 	if len(findMusicHistory.ID) > 0 {
 		query = query.Where("id = ?", findMusicHistory.ID)

@@ -34,7 +34,7 @@ func (repo *CommentRepository) CreateComment(comment *model.Comment) error {
 
 func (repo *CommentRepository) FindComment(findComment filter.FindComment) (error, []*model.Comment) {
 	var data []*model.Comment
-	query := repo.db.Model(&model.Comment{})
+	query := repo.db.Model(&model.Comment{}).Order("create_time DESC")
 
 	if len(findComment.ID) > 0 {
 		query = query.Where("id = ?", findComment.ID)
@@ -66,7 +66,7 @@ func (repo *CommentRepository) FindComment(findComment filter.FindComment) (erro
 func (repo *CommentRepository) FindCommentsWithPagination(findComment filter.FindCommentWithPagination) (error, []*model.Comment, int64) {
 	var data []*model.Comment
 	var total int64
-	query := repo.db.Model(&model.Comment{})
+	query := repo.db.Model(&model.Comment{}).Order("create_time DESC")
 
 	// Apply filters
 	if len(findComment.ID) > 0 {
