@@ -5,6 +5,7 @@ import (
 	"log"
 	"music_system/tool/filter"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -168,8 +169,24 @@ func (h *UserHandler) ListUser(c *gin.Context) {
 		})
 		return
 	}
+	if condition.StartTime > condition.EndTime ||
+		(condition.StartTime == condition.EndTime &&
+			(condition.StartTime != 0 && condition.EndTime != 0)) {
+		log.Println("参数错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body:    nil,
+		})
+		return
+	}
 
 	offset := (condition.Page - 1) * condition.Size
+	if condition.StartTime == 0 && condition.EndTime == 0 {
+		// 全局时间
+		condition.EndTime = int(time.Now().UnixMilli())
+	}
+
+	// todo 时间的查询
 
 	data, total, err := h.userService.ListUsers(offset, condition.Size)
 	if err != nil {
