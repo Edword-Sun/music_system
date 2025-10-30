@@ -26,8 +26,10 @@ func NewCommentHandler(commentService *service.CommentService) *CommentHandler {
 func (h *CommentHandler) Init(engine *gin.Engine) {
 	g := engine.Group("/comment")
 	{
-		g.POST("/find", h.FindComment)
 		g.POST("", h.CreateComment)
+		g.POST("/find", h.FindComment)
+		g.POST("/list", h.ListComment)
+
 		g.PUT("", h.UpdateComment)
 		g.DELETE("", h.DeleteComment)
 	}
@@ -97,6 +99,43 @@ func (h *CommentHandler) FindComment(c *gin.Context) {
 		Message: "查找comment成功",
 		Body:    data,
 	})
+}
+
+func (h *CommentHandler) ListComment(c *gin.Context) {
+	var condition filter.FindCommentWithPagination
+	err := c.ShouldBindJSON(&condition)
+	if err != nil {
+		log.Println("参数错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body:    nil,
+		})
+		return
+	}
+
+	var data []*model.Comment
+	var total int64
+
+	err, data, total = h.commentService.ListComment(condition)
+	if err != nil {
+		log.Println("list comment错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "list comment错误",
+			Body: gin.H{
+				"err": err,
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "成功",
+		Body: gin.H{
+			"total": total,
+			"data":  data,
+		},
+	})
+	return
 }
 
 func (h *CommentHandler) UpdateComment(c *gin.Context) {
