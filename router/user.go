@@ -3,7 +3,7 @@ package router
 import (
 	"fmt"
 	"log"
-	"music_system/tool/filter"
+	"music_system/router/handler"
 	"net/http"
 	"time"
 
@@ -12,6 +12,7 @@ import (
 	"music_system/model"
 	"music_system/service"
 	"music_system/tool"
+	"music_system/tool/filter"
 )
 
 type UserHandler struct {
@@ -33,6 +34,11 @@ func (h *UserHandler) Init(engine *gin.Engine) {
 		g.POST("", h.CreateUser)
 		g.PUT("", h.UpdateUser)
 		g.DELETE("/:id", h.DeleteUser)
+
+		// 登入
+		g.POST("/login", h.Login)
+		// 注册
+		g.POST("/register", h.Register)
 	}
 
 }
@@ -213,6 +219,110 @@ func (h *UserHandler) ListUser(c *gin.Context) {
 		Body: gin.H{
 			"total": total,
 			"data":  data,
+		},
+	})
+}
+
+func (h *UserHandler) Login(c *gin.Context) {
+	// 1 检查帐户
+	// 2 检查密码
+	// 3 通过验证
+
+	req := handler.LoginReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Println("参数错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body:    nil,
+		})
+		return
+	}
+
+	// 1 检查帐户
+	checkUser := model.User{
+		Account: req.Account,
+	}
+	_, resUser := h.userService.FindUser(&checkUser)
+	if len(resUser.ID) == 0 {
+		log.Println("帐户或密码错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "帐户或密码错误",
+			Body:    nil,
+		})
+		return
+	}
+
+	// 2 检查密码
+	if resUser.Password != req.Password {
+		log.Println("帐户或密码错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "帐户或密码错误",
+			Body:    nil,
+		})
+		return
+	}
+
+	// 3 通过验证
+	log.Println("登入成功")
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "登入成功",
+		Body:    nil,
+	})
+}
+
+func (h *UserHandler) Register(c *gin.Context) {
+	// 1 检查帐户是否存在
+	// 2 新建用户
+
+	// 1 检查帐户是否存在
+	var req handler.RegisterReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Println("参数错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body:    nil,
+		})
+		return
+	}
+
+	checkUser := model.User{
+		Account: req.Account,
+	}
+	_, resUser := h.userService.FindUser(&checkUser)
+	if len(resUser.ID) > 0 {
+		log.Println("帐户存在")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "帐户存在",
+			Body:    nil,
+		})
+		return
+	}
+
+	// 2 新建用户
+	addUser := model.User{
+		Name:     req.Account,
+		Account:  req.Account,
+		Password: req.Password,
+		Email:    req.Email,
+		Auth:     3, // 普通用户
+	}
+	err, id := h.userService.CreateUser(&addUser)
+	if err != nil {
+		log.Println("创建失败")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "创建失败",
+			Body: gin.H{
+				"err": err,
+			},
+		})
+		return
+	}
+
+	log.Println("创建成功")
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "创建成功",
+		Body: gin.H{
+			"id": id,
 		},
 	})
 }

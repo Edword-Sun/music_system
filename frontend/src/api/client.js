@@ -43,6 +43,14 @@ export async function listUsers(params) {
   return request('/user/list/', { method: 'POST', json: params });
 }
 
+export async function login(credentials) {
+  return request('/user/login', { method: 'POST', json: credentials });
+}
+
+export async function register(userInfo) {
+  return request('/user/register', { method: 'POST', json: userInfo });
+}
+
 // 音乐相关
 export async function createMusic(music) {
   return request('/music/', { method: 'POST', json: music })

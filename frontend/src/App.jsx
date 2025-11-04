@@ -5,6 +5,9 @@ import HomePage from './pages/HomePage';
 import UserPage from './pages/UserPage';
 import MusicPage from './pages/MusicPage';
 import ProfilePage from './pages/ProfilePage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import Navbar from './components/Navbar';
 
 // 创建 Spotify 风格的暗色主题
 const theme = createTheme({
@@ -140,11 +143,14 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <Router>
+        <Navbar />
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/user" element={<UserPage />} />
           <Route path="/music" element={<MusicPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
         </Routes>
       </Router>
     </ThemeProvider>
