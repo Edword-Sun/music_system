@@ -24,7 +24,7 @@ export async function checkHealth() {
 
 // 用户相关
 export async function createUser(user) {
-  return request('/user/add', { method: 'POST', json: user })
+  return request('/user', { method: 'POST', json: user })
 }
 
 export async function updateUser(user) {

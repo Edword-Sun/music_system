@@ -25,6 +25,10 @@ import {
   Divider,
   TablePagination,
   InputAdornment,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -46,6 +50,7 @@ const UserPage = () => {
     account: '',
     password: '',
     email: '',
+    auth: '',
   });
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -89,6 +94,7 @@ const UserPage = () => {
       account: user.account,
       password: '',
       email: user.email,
+      auth: user.auth,
     });
     setOpenDialog(true);
   };
@@ -244,6 +250,7 @@ const UserPage = () => {
                   <TableRow sx={{ '& th': { color: '#b3b3b3', fontWeight: 600 } }}>
                     <TableCell>ID</TableCell>
                     <TableCell>用户名</TableCell>
+                    <TableCell>账号</TableCell>
                     <TableCell>邮箱</TableCell>
                     <TableCell>创建时间</TableCell>
                     <TableCell>更新时间</TableCell>
@@ -252,7 +259,6 @@ const UserPage = () => {
                 </TableHead>
                 <TableBody>
                   {filteredUsers
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                     .map((user) => (
                       <TableRow
                         key={user.id}
@@ -266,6 +272,7 @@ const UserPage = () => {
                       >
                         <TableCell>{user.id}</TableCell>
                         <TableCell>{user.name}</TableCell>
+                        <TableCell>{user.account}</TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>{new Date(user.create_time).toLocaleString()}</TableCell>
                         <TableCell>{new Date(user.update_time).toLocaleString()}</TableCell>
@@ -329,7 +336,16 @@ const UserPage = () => {
               variant="outlined"
               value={formData.name}
               onChange={handleInputChange}
-              sx={{ mb: 2 }}
+            />
+            <TextField
+              margin="dense"
+              name="account"
+              label="账号"
+              type="text"
+              fullWidth
+              variant="outlined"
+              value={formData.account}
+              onChange={handleInputChange}
             />
             <TextField
               margin="dense"
@@ -352,6 +368,20 @@ const UserPage = () => {
               value={formData.email}
               onChange={handleInputChange}
             />
+            <FormControl fullWidth margin="dense">
+              <InputLabel>权限</InputLabel>
+              <Select
+                name="auth"
+                value={formData.auth}
+                onChange={handleInputChange}
+                label="权限"
+              >
+                <MenuItem value={0}>超级管理员</MenuItem>
+                <MenuItem value={1}>普通管理员</MenuItem>
+                <MenuItem value={2}>超级用户</MenuItem>
+                <MenuItem value={3}>普通用户</MenuItem>
+              </Select>
+            </FormControl>
           </DialogContent>
           <DialogActions sx={{ p: 2 }}>
             <Button onClick={handleCloseDialog} sx={{ color: '#b3b3b3' }}>
