@@ -243,7 +243,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 		Account: req.Account,
 	}
 	_, resUser := h.userService.FindUser(&checkUser)
-	if len(resUser.ID) == 0 {
+	if resUser == nil {
 		log.Println("帐户或密码错误")
 		c.JSON(http.StatusOK, tool.Response{
 			Message: "帐户或密码错误",
@@ -289,7 +289,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 		Account: req.Account,
 	}
 	_, resUser := h.userService.FindUser(&checkUser)
-	if len(resUser.ID) > 0 {
+	if resUser != nil {
 		log.Println("帐户存在")
 		c.JSON(http.StatusOK, tool.Response{
 			Message: "帐户存在",

@@ -21,10 +21,11 @@ export default function RegisterPage() {
     setMsg('');
     try {
       const res = await register(form);
-      if (res.Message === '注册成功') {
-        nav('/login'); // 成功就去登录页
+      const message = res?.message || res?.Message;
+      if (message && message.includes('成功')) {
+        nav('/login');
       } else {
-        setMsg(res.Message || '注册失败');
+        setMsg(message || '注册失败');
       }
     } catch (e) {
       setMsg('网络错误');

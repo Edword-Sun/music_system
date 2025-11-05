@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -18,13 +19,14 @@ import {
   Snackbar,
   Alert,
 } from '@mui/material';
-import { PlayArrow as PlayArrowIcon, Favorite as FavoriteIcon, Share as ShareIcon, Edit as EditIcon, Delete as DeleteIcon, Star as StarIcon } from '@mui/icons-material';
+import { PlayArrow as PlayArrowIcon, Favorite as FavoriteIcon, Share as ShareIcon, Edit as EditIcon, Delete as DeleteIcon, Star as StarIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { createMusic, findMusic, updateMusic, deleteMusic, listMusics } from '../api/client';
 import CommentSection from '../components/CommentSection';
 import UserActionPropertiesSection from '../components/UserActionPropertiesSection';
 import Pagination from '@mui/material/Pagination';
 
 const MusicPage = () => {
+  const navigate = useNavigate();
   const [musicList, setMusicList] = useState([]);
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(10);
@@ -168,9 +170,18 @@ const MusicPage = () => {
   return (
     <Box sx={{ flexGrow: 1, p: 3, backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
       <Container maxWidth="lg">
-        <Typography variant="h4" component="h1" gutterBottom sx={{ color: '#1DB954' }}>
-          音乐管理
-        </Typography>
+        <Box sx={{ pt: 1, pb: 2, display: 'flex', alignItems: 'center' }}>
+          <IconButton
+            onClick={() => navigate('/')}
+            sx={{ color: 'white', mr: 2 }}
+            aria-label="返回首页"
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h4" component="h1" gutterBottom sx={{ color: '#1DB954', m: 0 }}>
+            音乐管理
+          </Typography>
+        </Box>
         <Button
           variant="contained"
           sx={{

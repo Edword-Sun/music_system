@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const nav = useNavigate();
+  const { login: setAuthUser } = useAuth();
   const [form, setForm] = useState({ account: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
@@ -21,10 +23,13 @@ export default function LoginPage() {
     setMsg('');
     try {
       const res = await login(form);
-      if (res.Message === '登录成功') {
-        nav('/'); // 跳到首页
+      const message = res?.message || res?.Message;
+      if (message && message.includes('成功')) {
+        const user = res?.body?.user || { account: form.account };
+        setAuthUser(user);
+        nav('/');
       } else {
-        setMsg(res.Message || '登录失败');
+        setMsg(message || '登录失败');
       }
     } catch (e) {
       setMsg('网络错误');
