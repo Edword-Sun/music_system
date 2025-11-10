@@ -8,6 +8,8 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"music_system/model"
+	"music_system/router/check"
+	"music_system/router/handler"
 	"music_system/service"
 	"music_system/tool"
 	"music_system/tool/filter"
@@ -102,8 +104,16 @@ func (h *CommentHandler) FindComment(c *gin.Context) {
 }
 
 func (h *CommentHandler) ListComment(c *gin.Context) {
+	var req handler.ListCommentReq
+	var resp handler.ListCommentResp
 	var condition filter.FindCommentWithPagination
-	err := c.ShouldBindJSON(&condition)
+
+	log.Println("list comment 接受参数中")
+
+	err := c.ShouldBindJSON(&req)
+
+	log.Println("list comment 接受参数")
+
 	if err != nil {
 		log.Println("参数错误")
 		c.JSON(http.StatusOK, tool.Response{
@@ -113,10 +123,29 @@ func (h *CommentHandler) ListComment(c *gin.Context) {
 		return
 	}
 
-	var data []*model.Comment
-	var total int64
+	log.Println("list comment 校验参数中")
 
-	err, data, total = h.commentService.ListComment(condition)
+	err, condition = check.CheckListCommentReq(&req)
+
+	log.Println("list comment 校验参数结束")
+
+	if err != nil {
+		log.Println("参数错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body: gin.H{
+				"error": err.Error(),
+			},
+		})
+		return
+	}
+
+	log.Println("router:ListComment service:ListComment中")
+
+	err, resp.Data, resp.Total = h.commentService.ListComment(condition)
+
+	log.Println("router:ListComment service:ListComment结束")
+
 	if err != nil {
 		log.Println("list comment错误")
 		c.JSON(http.StatusOK, tool.Response{
@@ -131,10 +160,12 @@ func (h *CommentHandler) ListComment(c *gin.Context) {
 	c.JSON(http.StatusOK, tool.Response{
 		Message: "成功",
 		Body: gin.H{
-			"total": total,
-			"data":  data,
+			"total": resp.Total,
+			"data":  resp.Data,
 		},
 	})
+
+	log.Println("list comment 完成")
 	return
 }
 
