@@ -70,7 +70,7 @@ export const deleteMusic = (musicId) => request(`/music/${musicId}`, { method: '
 
 // 评论相关
 export async function createComment(comment) {
-  return request('/comment/', { method: 'POST', json: comment })
+  return request('/comment', { method: 'POST', json: comment })
 }
 
 export async function updateComment(comment) {
@@ -78,7 +78,7 @@ export async function updateComment(comment) {
 }
 
 export async function deleteComment(id) {
-  return request('/comment', { method: 'DELETE', json: { ID: id } })
+  return request('/comment', { method: 'DELETE', json: { id: id } })
 }
 
 export async function findComment(criteria) {

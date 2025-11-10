@@ -20,6 +20,7 @@ import {
   Pagination,
   Alert,
   Snackbar,
+  MenuItem,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -30,6 +31,7 @@ import {
   createComment,
   updateComment,
   deleteComment,
+  listMusics,
 } from '../api/client';
 
 const CommentPage = () => {
@@ -43,6 +45,7 @@ const CommentPage = () => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ content: '', music_id: '', user_id: '' });
+  const [musics, setMusics] = useState([]);
 
   const [toast, setToast] = useState({ open: false, severity: 'success', text: '' });
 
@@ -66,6 +69,26 @@ const CommentPage = () => {
     if (!user?.id) return;
     load();
   }, [page, keyword, user]);
+
+  const loadMusics = async () => {
+    try {
+      const res = await listMusics({ page: 1, size: 100 });
+      if (res?.body?.data) {
+        setMusics(res.body.data);
+      } else {
+        setMusics([]);
+      }
+    } catch (e) {
+      // 忽略音乐加载错误，保持表单可用
+      setMusics([]);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      loadMusics();
+    }
+  }, [open]);
 
   const showToast = (text, severity = 'success') => {
     setToast({ open: true, text, severity });
@@ -102,7 +125,7 @@ const CommentPage = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('确定删除？')) return;
     try {
-      await deleteComment({ id });
+      await deleteComment(id);
       showToast('删除成功');
       load();
     } catch (e) {
@@ -189,18 +212,22 @@ const CommentPage = () => {
           />
           <TextField
             margin="dense"
-            label="音乐ID"
+            label="选择音乐"
             fullWidth
+            select
             value={form.music_id}
             onChange={(e) => setForm({ ...form, music_id: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="用户ID"
-            fullWidth
-            disabled
-            value={form.user_id}
-          />
+          >
+            {musics.length === 0 ? (
+              <MenuItem value="" disabled>暂无音乐可选</MenuItem>
+            ) : (
+              musics.map((m) => (
+                <MenuItem key={m.id} value={m.id}>
+                  {(m.title || '无标题') + (m.singer_name ? ` - ${m.singer_name}` : '')}
+                </MenuItem>
+              ))
+            )}
+          </TextField>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>取消</Button>
