@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Button } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
@@ -14,6 +14,14 @@ const Navbar = () => {
             Music System
           </Link>
         </Typography>
+        {user && (
+          <Box sx={{ mr: 2 }}>
+            <Button color="inherit" component={Link} to="/music">音乐</Button>
+            <Button color="inherit" component={Link} to="/user">用户</Button>
+            <Button color="inherit" component={Link} to="/comments">评论</Button>
+            <Button color="inherit" component={Link} to="/favorites">收藏</Button>
+          </Box>
+        )}
         {user ? (
           <>
             <Typography variant="body1" sx={{ mr: 2 }}>

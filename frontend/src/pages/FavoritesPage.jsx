@@ -23,7 +23,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import {
   findUserActionProperties,
   deleteUserActionProperties,
@@ -38,8 +38,9 @@ import {
 
 const FavoritesPage = () => {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const [favoriteMusics, setFavoriteMusics] = useState([]);
+  const [uapList, setUapList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -56,13 +57,19 @@ const FavoritesPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [musicToDelete, setMusicToDelete] = useState(null);
+  // 选择目录添加收藏相关状态
+  const [selectDialogOpen, setSelectDialogOpen] = useState(false);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [libraryError, setLibraryError] = useState('');
+  const [libraryList, setLibraryList] = useState([]);
+  const [librarySearch, setLibrarySearch] = useState('');
 
   useEffect(() => {
     if (user && user.id) {
       fetchFavoriteMusics();
     } else {
       setLoading(false);
-      setError('请先登录以查看您的收藏。');
+      setError('请重新登录以完善用户信息（缺少用户ID）。');
     }
   }, [user]);
 
@@ -70,23 +77,34 @@ const FavoritesPage = () => {
     setLoading(true);
     setError('');
     try {
+      // 获取用户ID（必须存在）
+      const userId = user.id;
+      if (!userId) throw new Error('缺少用户ID');
       const response = await findUserActionProperties({
-        user_id: user.id,
+        user_id: userId,
         collected: true,
       });
       if (response.message === '查找user_action_properties成功' && response.body) {
-        const musicIds = response.body.map((uap) => uap.music_id);
+        const uaps = response.body || [];
+        setUapList(uaps);
         const musics = await Promise.all(
-          musicIds.map(async (musicId) => {
-            const musicResponse = await findMusic({ id: musicId });
-            if (musicResponse.message === 'Success' && musicResponse.body) {
-              return { ...musicResponse.body, uapId: response.body.find(uap => uap.music_id === musicId).id };
+          uaps.map(async (uap) => {
+            try {
+              const musicResponse = await findMusic({ id: uap.music_id });
+              // 后端成功时 message 可能为空字符串，这里以是否有 body 作为成功判定
+              if (musicResponse && musicResponse.body) {
+                return { ...musicResponse.body, uapId: uap.id };
+              }
+              // 音乐详情不存在时，使用占位信息保证也能展示一条记录
+              return { id: uap.music_id, title: '未知音乐', singer_name: '', uapId: uap.id, __placeholder: true };
+            } catch {
+              return { id: uap.music_id, title: '未知音乐', singer_name: '', uapId: uap.id, __placeholder: true };
             }
-            return null;
           })
         );
-        setFavoriteMusics(musics.filter(Boolean));
+        setFavoriteMusics(musics);
       } else {
+        setUapList([]);
         setFavoriteMusics([]);
       }
     } catch (err) {
@@ -114,16 +132,8 @@ const FavoritesPage = () => {
   };
 
   const handleAddMusic = () => {
-    setIsEditing(false);
-    setCurrentMusic({
-      id: '',
-      name: '',
-      artist: '',
-      album: '',
-      genre: '',
-      source: '',
-    });
-    setDialogOpen(true);
+    // 改为从目录选择添加收藏
+    openSelectDialog();
   };
 
   const handleEditMusic = (music) => {
@@ -135,6 +145,51 @@ const FavoritesPage = () => {
   const handleDeleteMusic = (music) => {
     setMusicToDelete(music);
     setDeleteConfirmOpen(true);
+  };
+
+  const openSelectDialog = async () => {
+    setSelectDialogOpen(true);
+    setLibraryLoading(true);
+    setLibraryError('');
+    try {
+      const resp = await listMusics({ page: 1, size: 50 });
+      const list = resp?.body?.data || [];
+      setLibraryList(list);
+    } catch (e) {
+      setLibraryError(e?.message || '加载音乐目录失败');
+    } finally {
+      setLibraryLoading(false);
+    }
+  };
+
+  const closeSelectDialog = () => {
+    setSelectDialogOpen(false);
+    setLibrarySearch('');
+  };
+
+  const addFavoriteFromLibrary = async (musicId) => {
+    try {
+      const userId = user.id;
+      if (!userId) {
+        setError('缺少用户ID，请重新登录后再试。');
+        return;
+      }
+      const resp = await createUserActionProperties({
+        user_id: userId,
+        music_id: musicId,
+        collected: true,
+      });
+      if (resp?.message && resp.message.includes('创建user_action_properties成功')) {
+        setSnackbarMessage('已加入收藏');
+        setSnackbarOpen(true);
+        closeSelectDialog();
+        fetchFavoriteMusics();
+      } else {
+        setError(resp?.message || '加入收藏失败');
+      }
+    } catch (e) {
+      setError(e?.message || '加入收藏失败');
+    }
   };
 
   const confirmDeleteMusic = async () => {
@@ -215,8 +270,9 @@ const FavoritesPage = () => {
           color="primary"
           startIcon={<AddIcon />}
           onClick={handleAddMusic}
+          sx={{ mr: 2 }}
         >
-          添加音乐
+          从目录选择添加
         </Button>
       </Box>
 
@@ -243,8 +299,11 @@ const FavoritesPage = () => {
           {favoriteMusics.map((music) => (
             <ListItem key={music.id} divider>
               <ListItemText
-                primary={music.name}
-                secondary={`${music.artist} - ${music.album}`}
+                primary={music.title || music.name || `ID: ${music.id}`}
+                secondary={
+                  (music.singer_name || music.artist || '') +
+                  (music.album ? ` - ${music.album}` : '')
+                }
               />
               <ListItemSecondaryAction>
                 <IconButton
@@ -273,6 +332,78 @@ const FavoritesPage = () => {
           ))}
         </List>
       )}
+
+      {/* 从目录选择添加收藏的对话框 */}
+      <Dialog
+        open={selectDialogOpen}
+        onClose={closeSelectDialog}
+        PaperProps={{
+          sx: { bgcolor: '#282828', color: 'white', minWidth: '520px' },
+        }}
+      >
+        <DialogTitle>选择音乐加入收藏</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            placeholder="搜索标题或歌手..."
+            value={librarySearch}
+            onChange={(e) => setLibrarySearch(e.target.value)}
+            variant="outlined"
+            sx={{ mb: 2 }}
+          />
+
+          {libraryLoading && (
+            <Box display="flex" justifyContent="center" mt={2}>
+              <CircularProgress />
+            </Box>
+          )}
+
+          {libraryError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {libraryError}
+            </Alert>
+          )}
+
+          {!libraryLoading && !libraryError && (
+            <List>
+              {(libraryList || [])
+                .filter((m) => {
+                  const q = librarySearch.trim().toLowerCase();
+                  if (!q) return true;
+                  const t = (m.title || '').toLowerCase();
+                  const s = (m.singer_name || '').toLowerCase();
+                  return t.includes(q) || s.includes(q);
+                })
+                .map((m) => {
+                  const alreadyFav = favoriteMusics.some((fm) => fm.id === m.id);
+                  return (
+                    <ListItem key={m.id} divider>
+                      <ListItemText
+                        primary={m.title || '未命名'}
+                        secondary={m.singer_name ? `歌手：${m.singer_name}` : undefined}
+                      />
+                      <ListItemSecondaryAction>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          disabled={alreadyFav}
+                          onClick={() => addFavoriteFromLibrary(m.id)}
+                        >
+                          {alreadyFav ? '已在收藏' : '加入收藏'}
+                        </Button>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  );
+                })}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeSelectDialog} sx={{ color: '#b3b3b3' }}>
+            关闭
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbarOpen}

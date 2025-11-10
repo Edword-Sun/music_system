@@ -6,6 +6,7 @@ import UserPage from './pages/UserPage';
 import MusicPage from './pages/MusicPage';
 import ProfilePage from './pages/ProfilePage';
 import FavoritesPage from './pages/FavoritesPage';
+import CommentPage from './pages/CommentPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Navbar from './components/Navbar';
@@ -153,6 +154,7 @@ function App() {
             <Route path="/music" element={<MusicPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/favorites" element={<FavoritesPage />} />
+            <Route path="/comments" element={<CommentPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
           </Routes>

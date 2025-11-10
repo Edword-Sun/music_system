@@ -266,7 +266,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 	log.Println("登入成功")
 	c.JSON(http.StatusOK, tool.Response{
 		Message: "登入成功",
-		Body:    nil,
+		Body:    gin.H{"user": resUser},
 	})
 }
 

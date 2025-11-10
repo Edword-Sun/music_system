@@ -85,9 +85,12 @@ export async function findComment(criteria) {
   return request('/comment/find', { method: 'POST', json: criteria });
 }
 
+export const listComments = (params) => request('/comment/list', { method: 'POST', json: params });
+
 // 用户操作属性相关
 export async function createUserActionProperties(userActionProperties) {
-  return request('/uap/', { method: 'POST', json: userActionProperties })
+  // 后端路由为 g.POST("", h.CreateUserActionProperties) 对应路径 /uap（无尾斜杠），避免 404
+  return request('/uap', { method: 'POST', json: userActionProperties })
 }
 
 export async function updateUserActionProperties(userActionProperties) {
