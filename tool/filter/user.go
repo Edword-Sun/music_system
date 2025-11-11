@@ -6,3 +6,6 @@ type ListUser struct {
 	StartTime int `json:"start_time"`
 	EndTime   int `json:"end_time"`
 }
+
+type FindUser struct {
+}

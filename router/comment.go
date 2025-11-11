@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	uuid "github.com/satori/go.uuid"
 
 	"music_system/model"
 	"music_system/router/check"
@@ -29,6 +28,7 @@ func (h *CommentHandler) Init(engine *gin.Engine) {
 	g := engine.Group("/comment")
 	{
 		g.POST("", h.CreateComment)
+
 		g.POST("/find", h.FindComment)
 		g.POST("/list", h.ListComment)
 
@@ -38,8 +38,12 @@ func (h *CommentHandler) Init(engine *gin.Engine) {
 }
 
 func (h *CommentHandler) CreateComment(c *gin.Context) {
-	var comment model.Comment
-	err := c.ShouldBindJSON(&comment)
+	var req handler.CreateCommentReq
+	var resp handler.CreateCommentResp
+
+	log.Println("create comment 接受参数中")
+	err := c.ShouldBindJSON(&req)
+	log.Println("create comment 接受参数完")
 	if err != nil {
 		log.Println("参数错误")
 		c.JSON(http.StatusOK, tool.Response{
@@ -50,10 +54,29 @@ func (h *CommentHandler) CreateComment(c *gin.Context) {
 		return
 	}
 
-	comment.ID = uuid.NewV4().String()
-	err = h.commentService.CreateComment(&comment)
+	var comment model.Comment
+	log.Println("create comment 校验参数中")
+	err, comment = check.CheckCreateCommentReq(&req)
+	log.Println("create comment 校验参数完")
+
 	if err != nil {
-		log.Println("err: ", err)
+		log.Println("CreateComment:校验参数失败: ", err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body: gin.H{
+				"err": err.Error(),
+			},
+		})
+
+		return
+	}
+
+	log.Println("create comment 创建comment中")
+	err = h.commentService.CreateComment(&comment)
+	log.Println("create comment 创建comment完")
+
+	if err != nil {
+		log.Println("CreateComment:创建comment错误: ", err)
 		c.JSON(http.StatusOK, tool.Response{
 			Message: "创建comment错误",
 			Body:    nil,
@@ -62,18 +85,22 @@ func (h *CommentHandler) CreateComment(c *gin.Context) {
 		return
 	}
 
-	log.Println("创建comment成功")
+	resp.ID = comment.ID
 	c.JSON(http.StatusOK, tool.Response{
 		Message: "创建comment成功",
 		Body: gin.H{
 			"id": comment.ID,
 		},
 	})
+	log.Println("create comment 创建comment成功")
 }
 
 func (h *CommentHandler) FindComment(c *gin.Context) {
+	var req handler.FindCommentReq
+	var resp handler.FindCommentResp
+
 	var condition filter.FindComment
-	err := c.ShouldBindJSON(&condition)
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		log.Println("参数错误")
 		c.JSON(http.StatusOK, tool.Response{
@@ -81,6 +108,18 @@ func (h *CommentHandler) FindComment(c *gin.Context) {
 			Body:    nil,
 		})
 
+		return
+	}
+
+	err, condition = check.CheckFindComment(&req)
+	if err != nil {
+		log.Println("校验参数错误: ", err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body: gin.H{
+				"err": err.Error(),
+			},
+		})
 		return
 	}
 
@@ -96,10 +135,11 @@ func (h *CommentHandler) FindComment(c *gin.Context) {
 		return
 	}
 
+	resp.Data = data
 	log.Println("查找comment成功")
 	c.JSON(http.StatusOK, tool.Response{
 		Message: "查找comment成功",
-		Body:    data,
+		Body:    resp.Data,
 	})
 }
 
@@ -170,10 +210,23 @@ func (h *CommentHandler) ListComment(c *gin.Context) {
 }
 
 func (h *CommentHandler) UpdateComment(c *gin.Context) {
+	var req handler.UpdateCommentReq
+	//var resp handler.UpdateCommentResp
 	var data model.Comment
-	err := c.ShouldBindJSON(&data)
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		log.Println("参数错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body:    nil,
+		})
+
+		return
+	}
+
+	err, data = check.CheckUpdateComment(&req)
+	if err != nil {
+		log.Println("err: ", err)
 		c.JSON(http.StatusOK, tool.Response{
 			Message: "参数错误",
 			Body:    nil,
@@ -200,12 +253,25 @@ func (h *CommentHandler) UpdateComment(c *gin.Context) {
 	})
 }
 func (h *CommentHandler) DeleteComment(c *gin.Context) {
+	var req handler.DeleteCommentReq
+	//var resp handler.DeleteCommentResp
 	var condition filter.DeleteComment
-	err := c.ShouldBindJSON(&condition)
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		log.Println("参数错误")
 		c.JSON(http.StatusOK, tool.Response{
 			Message: "参数错误",
+			Body:    nil,
+		})
+
+		return
+	}
+
+	err, condition = check.CheckDeleteComment(&req)
+	if err != nil {
+		log.Println("err: ", err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "校验参数错误",
 			Body:    nil,
 		})
 
