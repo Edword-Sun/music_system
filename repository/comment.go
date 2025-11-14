@@ -79,9 +79,7 @@ func (repo *CommentRepository) FindCommentsWithPagination(findComment filter.Fin
 		query = query.Where("music_id IN ?", findComment.MusicID)
 	}
 
-	if findComment.EndTime > 0 && findComment.StartTime > 0 {
-		query = query.Where("create_time BETWEEN ? AND ?", time.UnixMilli(findComment.StartTime), time.UnixMilli(findComment.EndTime))
-	}
+	query = query.Where("create_time BETWEEN ? AND ?", time.UnixMilli(findComment.StartTime), time.UnixMilli(findComment.EndTime))
 
 	// Count total before pagination
 	err := query.Count(&total).Error

@@ -8,6 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"music_system/model"
+	"music_system/router/check"
+	"music_system/router/handler"
 	"music_system/service"
 	"music_system/tool"
 	"music_system/tool/filter"
@@ -31,7 +33,7 @@ func (h *MusicHandler) Init(engine *gin.Engine) {
 
 		g.POST("", h.CreateMusic)
 		g.PUT("", h.UpdateMusic)
-		g.DELETE("/:id", h.DeleteMusic)
+		g.DELETE("/", h.DeleteMusic)
 	}
 
 }
@@ -168,18 +170,29 @@ func (h *MusicHandler) UpdateMusic(c *gin.Context) {
 	})
 }
 func (h *MusicHandler) DeleteMusic(c *gin.Context) {
-	musicID := c.Param("id")
-	if len(musicID) == 0 {
+	var req handler.DeleteMusicReq
+	//var resp handler.DeleteMusicResp
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Println("参数错误")
 		c.JSON(http.StatusOK, tool.Response{
-			Message: "参数为空",
-			Body:    nil,
+			Message: "参数错误",
+			Body:    err,
 		})
 		return
 	}
 
-	var music model.Music
-	music.ID = musicID
-	err := h.musicService.DeleteMusic(&music)
+	err, music := check.CheckDeleteMusic(&req)
+	if err != nil {
+		log.Println("校验参数错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "校验参数错误",
+			Body:    err,
+		})
+		return
+	}
+
+	err = h.musicService.DeleteMusic(&music)
 	if err != nil {
 		fmt.Println("删除错误: ", err.Error())
 		c.JSON(http.StatusOK, tool.Response{
@@ -191,6 +204,7 @@ func (h *MusicHandler) DeleteMusic(c *gin.Context) {
 		return
 	}
 
+	log.Println("删除music成功")
 	c.JSON(http.StatusOK, tool.Response{
 		Message: "删除成功",
 		Body:    nil,

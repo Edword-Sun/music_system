@@ -3,10 +3,12 @@ package repository
 import (
 	"errors"
 	"fmt"
-	"gorm.io/gorm"
 	"log"
 
+	"gorm.io/gorm"
+
 	"music_system/model"
+	"music_system/tool/filter"
 )
 
 type UserRepository struct {
@@ -31,20 +33,20 @@ func (repo *UserRepository) Create(user *model.User) error {
 }
 
 // find
-func (repo *UserRepository) Find(user *model.User) (error, *model.User) {
+func (repo *UserRepository) Find(condition *filter.FindUser) (error, *model.User) {
 	var data model.User
 	query := repo.db.Model(&model.User{}).Order("create_time DESC")
-	if len(user.ID) > 0 {
-		query = query.Where("id = ?", user.ID)
+	if len(condition.ID) > 0 {
+		query = query.Where("id = ?", condition.ID)
 	}
-	if len(user.Name) > 0 {
-		query = query.Where("name = ?", user.Name)
+	if len(condition.Name) > 0 {
+		query = query.Where("name = ?", condition.Name)
 	}
-	if len(user.Account) > 0 {
-		query = query.Where("account = ?", user.Account)
+	if len(condition.Account) > 0 {
+		query = query.Where("account = ?", condition.Account)
 	}
-	if len(user.Email) > 0 {
-		query = query.Where("email = ?", user.Email)
+	if len(condition.Email) > 0 {
+		query = query.Where("email = ?", condition.Email)
 	}
 
 	err := query.First(&data).Error
@@ -58,11 +60,29 @@ func (repo *UserRepository) Find(user *model.User) (error, *model.User) {
 	return nil, &data
 }
 
-func (repo *UserRepository) List(offset, size int) ([]*model.User, int64, error) {
+func (repo *UserRepository) List(condition filter.ListUser) ([]*model.User, int64, error) {
 	var data []*model.User
 	var total int64
 
 	query := repo.db.Model(&model.User{}).Order("create_time DESC")
+
+	if len(condition.IDs) > 0 {
+		query = query.Where("id IN ?", condition.IDs)
+	}
+	if len(condition.Names) > 0 {
+		query = query.Where("name IN ?", condition.Names)
+	}
+	if len(condition.Accounts) > 0 {
+		query = query.Where("account IN ?", condition.Accounts)
+	}
+	if len(condition.Passwords) > 0 {
+		query = query.Where("password IN ?", condition.Passwords)
+	}
+	if len(condition.Emails) > 0 {
+		query = query.Where("email IN ?", condition.Emails)
+	}
+
+	query = query.Where("create_time BETWEEN ? AND ?", condition.StartTime, condition.EndTime)
 
 	err := query.Count(&total).Error
 	if err != nil {
@@ -70,7 +90,7 @@ func (repo *UserRepository) List(offset, size int) ([]*model.User, int64, error)
 		return nil, 0, errors.New("内部错误")
 	}
 
-	err = query.Offset(offset).Limit(size).Find(&data).Error
+	err = query.Offset(condition.Offset).Limit(condition.Limit).Find(&data).Error
 	if err != nil {
 		log.Println("err", err)
 		return nil, 0, errors.New("内部错误")

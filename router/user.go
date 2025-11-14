@@ -3,16 +3,15 @@ package router
 import (
 	"fmt"
 	"log"
-	"music_system/router/handler"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"music_system/model"
+	"music_system/router/check"
+	"music_system/router/handler"
 	"music_system/service"
 	"music_system/tool"
-	"music_system/tool/filter"
 )
 
 type UserHandler struct {
@@ -33,7 +32,7 @@ func (h *UserHandler) Init(engine *gin.Engine) {
 
 		g.POST("", h.CreateUser)
 		g.PUT("", h.UpdateUser)
-		g.DELETE("/:id", h.DeleteUser)
+		g.DELETE("/", h.DeleteUser)
 
 		// 登入
 		g.POST("/login", h.Login)
@@ -44,9 +43,10 @@ func (h *UserHandler) Init(engine *gin.Engine) {
 }
 
 func (h *UserHandler) FindUser(c *gin.Context) {
-	var user model.User
+	var req handler.FindUserReq
+	var resp handler.FindUserResp
 
-	if err := c.ShouldBindJSON(&user); err != nil && err.Error() != "EOF" {
+	if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
 		fmt.Println("error: ", err.Error())
 		c.JSON(http.StatusOK, tool.Response{
 			Message: "Bad Request",
@@ -56,15 +56,17 @@ func (h *UserHandler) FindUser(c *gin.Context) {
 		return
 	}
 
-	//if user.ID == "" {
-	//	c.JSON(http.StatusOK, tool.Response{
-	//		Message: "Bad Request",
-	//		Body:    gin.H{"error": "User ID is required"},
-	//	})
-	//	return
-	//}
+	err, condition := check.CheckFindUser(&req)
+	if err != nil {
+		fmt.Println("error: ", err.Error())
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body:    gin.H{"error": err.Error()},
+		})
+		return
+	}
 
-	err, getUser := h.userService.FindUser(&user)
+	err, getUser := h.userService.FindUser(&condition)
 	if err != nil {
 		fmt.Println("error: ", err.Error())
 		c.JSON(http.StatusOK, tool.Response{
@@ -82,15 +84,51 @@ func (h *UserHandler) FindUser(c *gin.Context) {
 		return
 	}
 
+	log.Println("find user完成")
+	resp.Data = *getUser
 	c.JSON(http.StatusOK, tool.Response{
 		Message: "Success",
 		Body:    getUser,
 	})
 }
 
+func (h *UserHandler) ListUser(c *gin.Context) {
+	var req handler.ListUserReq
+	var resp handler.ListUserResp
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Println("参数错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body:    nil,
+		})
+		return
+	}
+
+	err, condition := check.CheckListUser(&req)
+	data, total, err := h.userService.ListUsers(condition)
+	if err != nil {
+		log.Println("list user 错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "list user 错误",
+			Body:    gin.H{"error": err.Error()},
+		})
+		return
+	}
+
+	resp.Total = total
+	resp.Data = data
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "list user 成功",
+		Body:    resp,
+	})
+}
+
 func (h *UserHandler) CreateUser(c *gin.Context) {
-	var user model.User
-	if err := c.ShouldBindJSON(&user); err != nil && err.Error() != "EOF" {
+	var req handler.CreateUserReq
+	var resp handler.CreateUserResp
+
+	if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
 		fmt.Println("error: ", err.Error())
 		c.JSON(http.StatusOK, tool.Response{
 			Message: "参数错误",
@@ -99,6 +137,9 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 
 		return
 	}
+
+	err, user := check.CheckCreateUser(&req)
+
 	err, id := h.userService.CreateUser(&user)
 	if err != nil {
 		fmt.Println("error: ", err.Error())
@@ -110,22 +151,36 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
+	resp.ID = id
 	c.JSON(http.StatusOK, tool.Response{
 		Message: "创建用户成功",
-		Body:    gin.H{"id": id},
+		Body:    resp,
 	})
 
 }
 
 func (h *UserHandler) UpdateUser(c *gin.Context) {
+	var req handler.UpdateUserReq
+	//var resp handler.UpdateUserResp
+
 	var user model.User
-	if err := c.ShouldBindJSON(&user); err != nil && err.Error() != "EOF" {
+	if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
 		fmt.Println("error: ", err.Error())
 		c.JSON(http.StatusOK, tool.Response{
 			Message: "参数错误",
 			Body:    gin.H{"error": err.Error()},
 		})
 
+		return
+	}
+
+	err, user := check.CheckUpdateUser(&req)
+	if err != nil {
+		log.Println("校验参数错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "校验参数错误",
+			Body:    err,
+		})
 		return
 	}
 
@@ -139,6 +194,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
+	log.Println("update user 完成")
 	c.JSON(http.StatusOK, tool.Response{
 		Message: "更新用户成功",
 		Body:    "",
@@ -146,9 +202,29 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 }
 
 func (h *UserHandler) DeleteUser(c *gin.Context) {
-	id := c.Param("id")
+	var req handler.DeleteUserReq
+	//var resp handler.DeleteUserResp
+	var user model.User
 
-	if err := h.userService.DeleteUser(&model.User{ID: id}); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
+		log.Println("参数错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body:    err,
+		})
+		return
+	}
+
+	err, user := check.CheckDeleteUser(&req)
+	if err != nil {
+		log.Println("校验参数错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "校验参数错误",
+			Body:    err,
+		})
+	}
+
+	if err := h.userService.DeleteUser(&user); err != nil {
 		fmt.Println("error: ", err.Error())
 		c.JSON(http.StatusOK, tool.Response{
 			Message: "删除错误",
@@ -158,68 +234,10 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
+	log.Println("删除用户成功")
 	c.JSON(http.StatusOK, tool.Response{
 		Message: "删除用户成功",
 		Body:    "",
-	})
-}
-
-func (h *UserHandler) ListUser(c *gin.Context) {
-	var condition filter.ListUser
-
-	if err := c.ShouldBindJSON(&condition); err != nil {
-		log.Println("参数错误")
-		c.JSON(http.StatusOK, tool.Response{
-			Message: "参数错误",
-			Body:    nil,
-		})
-		return
-	}
-
-	// todo 整合判断条件
-	if condition.Size == 0 || condition.Page == 0 {
-		log.Println("参数错误")
-		c.JSON(http.StatusOK, tool.Response{
-			Message: "参数错误",
-			Body:    nil,
-		})
-		return
-	}
-	if condition.StartTime > condition.EndTime ||
-		(condition.StartTime == condition.EndTime &&
-			(condition.StartTime != 0 && condition.EndTime != 0)) {
-		log.Println("参数错误")
-		c.JSON(http.StatusOK, tool.Response{
-			Message: "参数错误",
-			Body:    nil,
-		})
-		return
-	}
-
-	offset := (condition.Page - 1) * condition.Size
-	if condition.StartTime == 0 && condition.EndTime == 0 {
-		// 全局时间
-		condition.EndTime = int(time.Now().UnixMilli())
-	}
-
-	// todo 时间的查询
-
-	data, total, err := h.userService.ListUsers(offset, condition.Size)
-	if err != nil {
-		log.Println("list user 错误")
-		c.JSON(http.StatusOK, tool.Response{
-			Message: "list user 错误",
-			Body:    gin.H{"error": err.Error()},
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, tool.Response{
-		Message: "list user 成功",
-		Body: gin.H{
-			"total": total,
-			"data":  data,
-		},
 	})
 }
 
@@ -239,9 +257,18 @@ func (h *UserHandler) Login(c *gin.Context) {
 	}
 
 	// 1 检查帐户
-	checkUser := model.User{
-		Account: req.Account,
+	err, checkUser := check.CheckLogin(&req)
+	if err != nil {
+		log.Println("校验参数错误 err: ", err.Error())
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "校验参数错误",
+			Body: gin.H{
+				"error": err.Error(),
+			},
+		})
+		return
 	}
+
 	_, resUser := h.userService.FindUser(&checkUser)
 	if resUser == nil {
 		log.Println("帐户或密码错误")
@@ -285,9 +312,16 @@ func (h *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
-	checkUser := model.User{
-		Account: req.Account,
+	err, checkUser := check.CheckRegister(&req)
+	if err != nil {
+		log.Println("校验参数错误")
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "校验参数错误",
+			Body:    nil,
+		})
+		return
 	}
+
 	_, resUser := h.userService.FindUser(&checkUser)
 	if resUser != nil {
 		log.Println("帐户存在")

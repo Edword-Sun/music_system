@@ -3,12 +3,10 @@ package service
 import (
 	"fmt"
 	"log"
-	"time"
-
-	uuid "github.com/satori/go.uuid"
 
 	"music_system/model"
 	"music_system/repository"
+	"music_system/tool/filter"
 )
 
 type UserService struct {
@@ -22,10 +20,6 @@ func NewUserService(userRepo *repository.UserRepository) *UserService {
 }
 
 func (svc *UserService) CreateUser(user *model.User) (error, string) {
-	user.ID = uuid.NewV4().String()
-	user.CreateTime = time.Now()
-	user.UpdateTime = time.Now()
-
 	err := svc.userRepo.Create(user)
 	if err != nil {
 		fmt.Println("svc create user 错误")
@@ -35,8 +29,8 @@ func (svc *UserService) CreateUser(user *model.User) (error, string) {
 	return nil, user.ID
 }
 
-func (svc *UserService) FindUser(user *model.User) (error, *model.User) {
-	err, getUser := svc.userRepo.Find(user)
+func (svc *UserService) FindUser(condition *filter.FindUser) (error, *model.User) {
+	err, getUser := svc.userRepo.Find(condition)
 	if err != nil {
 		fmt.Println("svc find user 错误")
 		return err, nil
@@ -63,8 +57,8 @@ func (svc *UserService) DeleteUser(user *model.User) error {
 	return nil
 }
 
-func (svc *UserService) ListUsers(offset, size int) ([]*model.User, int64, error) {
-	users, total, err := svc.userRepo.List(offset, size)
+func (svc *UserService) ListUsers(condition filter.ListUser) ([]*model.User, int64, error) {
+	users, total, err := svc.userRepo.List(condition)
 	if err != nil {
 		log.Println("列表查找错误")
 		return nil, 0, err
