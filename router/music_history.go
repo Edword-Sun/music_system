@@ -2,9 +2,9 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"music_system/tool"
 
 	"music_system/service"
+	"music_system/tool"
 )
 
 type MusicHistoryHandler struct {
