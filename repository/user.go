@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -82,7 +83,15 @@ func (repo *UserRepository) List(condition filter.ListUser) ([]*model.User, int6
 		query = query.Where("email IN ?", condition.Emails)
 	}
 
-	query = query.Where("create_time BETWEEN ? AND ?", condition.StartTime, condition.EndTime)
+	// 假设 condition.StartTime 是毫秒时间戳（如 1732521600000）
+	startTime := time.UnixMilli(condition.StartTime)
+	endTime := time.UnixMilli(condition.EndTime)
+
+	// （可选）显式设置时区，确保与数据库一致
+	startTime = startTime.In(time.UTC)
+	endTime = endTime.In(time.UTC)
+
+	query = query.Where("create_time BETWEEN ? AND ?", startTime, endTime)
 
 	err := query.Count(&total).Error
 	if err != nil {

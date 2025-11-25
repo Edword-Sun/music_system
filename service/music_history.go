@@ -5,6 +5,7 @@ import (
 
 	"music_system/model"
 	"music_system/repository"
+	"music_system/tool/filter"
 )
 
 type MusicHistoryService struct {
@@ -24,5 +25,22 @@ func (svc *MusicHistoryService) CreateMusicHistory(mh *model.MusicHistory) error
 		return err
 	}
 
+	return nil
+}
+
+func (svc *MusicHistoryService) FindMusicHistory(condition filter.FindMusicHistory) (error, []*model.MusicHistory) {
+	log.Println("implement!!!")
+	return nil, nil
+}
+func (svc *MusicHistoryService) ListMusicHistory(condition filter.ListMusicHistory) (error, []*model.MusicHistory, int64) {
+	log.Println("implement!!!")
+	return nil, nil, 0
+}
+func (svc *MusicHistoryService) UpdateMusicHistory(mh *model.MusicHistory) error {
+	log.Println("implement!!!")
+	return nil
+}
+func (svc *MusicHistoryService) DeleteMusicHistory(condition filter.DeleteMusicHistory) error {
+	log.Println("implement!!!")
 	return nil
 }

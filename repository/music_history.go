@@ -11,6 +11,11 @@ import (
 	"music_system/tool/filter"
 )
 
+const (
+	MAXLIMIT = 999999999
+	MAXOFFSET
+)
+
 type MusicHistoryRepository struct {
 	db *gorm.DB
 }
@@ -48,8 +53,15 @@ func (repo *MusicHistoryRepository) FindMusicHistory(findMusicHistory filter.Fin
 
 	// todo 时间的检验方法还要再看
 	if findMusicHistory.EndTime > 0 && findMusicHistory.StartTime > 0 {
-		query = query.Where("create_time > ?", time.UnixMilli(findMusicHistory.StartTime))
-		query = query.Where("create_time < ?", time.UnixMilli(findMusicHistory.EndTime))
+		// 假设 condition.StartTime 是毫秒时间戳（如 1732521600000）
+		startTime := time.UnixMilli(findMusicHistory.StartTime)
+		endTime := time.UnixMilli(findMusicHistory.EndTime)
+
+		// （可选）显式设置时区，确保与数据库一致
+		startTime = startTime.In(time.UTC)
+		endTime = endTime.In(time.UTC)
+
+		query = query.Where("create_time BETWEEN ? AND ?", startTime, endTime)
 	}
 
 	err := query.Find(&data).Error
@@ -65,6 +77,62 @@ func (repo *MusicHistoryRepository) FindMusicHistory(findMusicHistory filter.Fin
 
 }
 
+func (repo *MusicHistoryRepository) ListMusicHistory(condition filter.ListMusicHistory) (error, []*model.MusicHistory, int64) {
+	var data []*model.MusicHistory
+	var total int64
+	query := repo.db.Model(&model.MusicHistory{}).Order("create_time DESC")
+
+	// Apply filters
+	if len(condition.IDs) > 0 {
+		query = query.Where("id IN (?)", condition.IDs)
+	}
+	if len(condition.UserIDs) > 0 {
+		query = query.Where("user_id IN (?)", condition.UserIDs)
+	}
+	if len(condition.MusicIDs) > 0 {
+		query = query.Where("music_id IN (?)", condition.MusicIDs)
+	}
+	if len(condition.Titles) > 0 {
+		query = query.Where("title IN (?)", condition.Titles)
+	}
+	if len(condition.Descriptions) > 0 {
+		query = query.Where("description IN (?)", condition.Descriptions)
+	}
+
+	startTime := time.UnixMilli(condition.StartTime)
+	endTime := time.UnixMilli(condition.EndTime)
+	query = query.Where("create_time BETWEEN ? AND ?", startTime, endTime)
+
+	// Count total before pagination
+	err := query.Count(&total).Error
+	if err != nil {
+		log.Println("err: %v", err)
+		return errors.New("内部错误"), nil, 0
+	}
+
+	// Apply pagination
+	if condition.Limit <= 0 {
+		condition.Limit = 10
+	}
+	if condition.Limit > MAXLIMIT {
+		condition.Limit = MAXLIMIT
+	}
+	if condition.Offset <= 0 {
+		condition.Offset = 0
+	}
+	if condition.Offset > MAXOFFSET {
+		condition.Offset = MAXOFFSET
+	}
+
+	err = query.Limit(condition.Limit).Offset(condition.Offset).Find(&data).Error
+	if err != nil {
+		log.Printf("err: %v", err)
+		return errors.New("内部错误"), nil, 0
+	}
+
+	return nil, data, total
+}
+
 func (repo *MusicHistoryRepository) UpdateMusicHistory(musicHistory *model.MusicHistory) error {
 	if musicHistory == nil {
 		log.Println("error: 空指针 music_history")
@@ -75,7 +143,7 @@ func (repo *MusicHistoryRepository) UpdateMusicHistory(musicHistory *model.Music
 		return errors.New("更新失败：必须提供 ID")
 	}
 
-	query := repo.db.Model(musicHistory)
+	query := repo.db.Model(&model.MusicHistory{})
 	query = query.Where("id = ?", musicHistory.ID)
 
 	err := query.Updates(musicHistory).Error
