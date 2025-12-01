@@ -164,7 +164,7 @@ func (h *MusicHistoryHandler) AddMusicHistory(c *gin.Context) {
 	}
 
 	resp.ID = mh.ID
-
+	log.Println("mh添加成功")
 	c.JSON(200, tool.Response{
 		Message: "添加成功",
 		Body:    resp,

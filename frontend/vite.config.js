@@ -9,6 +9,7 @@ export default defineConfig({
     proxy: {
       '/user': 'http://localhost:8080',
       '/music': 'http://localhost:8080',
+      '/mh': 'http://localhost:8080',
       '/uap': 'http://localhost:8080',
       '/health': 'http://localhost:8080'
     }

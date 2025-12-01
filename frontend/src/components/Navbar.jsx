@@ -20,6 +20,7 @@ const Navbar = () => {
             <Button color="inherit" component={Link} to="/user">用户</Button>
             <Button color="inherit" component={Link} to="/comments">评论</Button>
             <Button color="inherit" component={Link} to="/favorites">收藏</Button>
+            <Button color="inherit" component={Link} to="/history">历史</Button>
           </Box>
         )}
         {user ? (

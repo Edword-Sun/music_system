@@ -32,7 +32,7 @@ export async function updateUser(user) {
 }
 
 export async function deleteUser(id) {
-  return request(`/user/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  return request('/user/', { method: 'DELETE', json: { id } })
 }
 
 export async function findUser(criteria) {
@@ -66,7 +66,7 @@ export async function findMusic(criteria) {
 
 export const listMusics = (params) => request('/music/list', { method: 'POST', json: params });
 
-export const deleteMusic = (musicId) => request(`/music/${musicId}`, { method: 'DELETE' });
+export const deleteMusic = (id) => request('/music/', { method: 'DELETE', json: { id } });
 
 // 评论相关
 export async function createComment(comment) {
@@ -103,4 +103,23 @@ export async function deleteUserActionProperties(id) {
 
 export async function findUserActionProperties(criteria) {
   return request('/uap/find', { method: 'POST', json: criteria });
+}
+
+// 音乐历史（mh）相关
+export async function findMusicHistory(criteria) {
+  return request('/mh/get', { method: 'POST', json: criteria })
+}
+
+export const listMusicHistories = (params) => request('/mh/list', { method: 'POST', json: params });
+
+export async function addMusicHistory(data) {
+  return request('/mh/add', { method: 'POST', json: data })
+}
+
+export async function updateMusicHistory(data) {
+  return request('/mh/update', { method: 'PUT', json: data })
+}
+
+export async function deleteMusicHistory(id) {
+  return request('/mh/delete', { method: 'POST', json: { id } })
 }
