@@ -29,18 +29,38 @@ func (svc *MusicHistoryService) CreateMusicHistory(mh *model.MusicHistory) error
 }
 
 func (svc *MusicHistoryService) FindMusicHistory(condition filter.FindMusicHistory) (error, []*model.MusicHistory) {
-	log.Println("implement!!!")
-	return nil, nil
+	err, data := svc.MusicHistoryRepository.FindMusicHistory(condition)
+	if err != nil {
+		log.Println("err: ", err.Error())
+		return err, nil
+	}
+
+	return nil, data
 }
 func (svc *MusicHistoryService) ListMusicHistory(condition filter.ListMusicHistory) (error, []*model.MusicHistory, int64) {
-	log.Println("implement!!!")
-	return nil, nil, 0
+	err, data, total := svc.MusicHistoryRepository.ListMusicHistory(condition)
+	if err != nil {
+		log.Println("err: ", err.Error())
+		return err, nil, 0
+	}
+
+	return nil, data, total
 }
 func (svc *MusicHistoryService) UpdateMusicHistory(mh *model.MusicHistory) error {
-	log.Println("implement!!!")
+	err := svc.MusicHistoryRepository.UpdateMusicHistory(mh)
+	if err != nil {
+		log.Println("err: ", err.Error())
+		return err
+	}
+
 	return nil
 }
 func (svc *MusicHistoryService) DeleteMusicHistory(condition filter.DeleteMusicHistory) error {
-	log.Println("implement!!!")
+	err := svc.MusicHistoryRepository.DeleteMusicHistory(condition)
+	if err != nil {
+		log.Println("err: ", err.Error())
+		return err
+	}
+
 	return nil
 }

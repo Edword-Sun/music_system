@@ -44,3 +44,19 @@ CREATE TABLE `user_action_properties` (
   `create_time` DATETIME NOT NULL,
   `update_time` DATETIME NOT NULL
 );
+
+-- 2025-10-20
+CREATE TABLE `music_history` (
+    `id` VARCHAR(255) PRIMARY KEY DEFAULT ( UUID () ),
+    `music_id` TEXT NOT NULL,
+    `user_id` TEXT NOT NULL,
+    `title` TEXT NOT NULL,
+    `description` TEXT NOT NULL,
+    `create_time` DATETIME NOT NULL,
+    `update_time` DATETIME NOT NULL
+);
+ALTER TABLE `user` ADD COLUMN `is_delete` BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE `music` ADD COLUMN `is_delete` BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE `comment` ADD COLUMN `is_delete` BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE `user_action_properties` ADD COLUMN `is_delete` BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE `music_history` ADD COLUMN `is_delete` BOOLEAN NOT NULL DEFAULT FALSE;
