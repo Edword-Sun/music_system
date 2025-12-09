@@ -21,6 +21,16 @@ CREATE TABLE music (
     create_time DATETIME NOT NULL,
     update_time DATETIME NOT NULL
 );
+ALTER TABLE `music` ADD COLUMN `cover_url` TEXT;
+ALTER TABLE `music` ADD COLUMN `source_url` TEXT;
+ALTER TABLE `music` ADD COLUMN `duration_ms` INT;
+ALTER TABLE `music` ADD COLUMN `mime_type` TEXT;
+ALTER TABLE `music` ADD COLUMN `bitrate_kbps` INT;
+ALTER TABLE `music` ADD COLUMN `file_size` BIGINT;
+ALTER TABLE `music` ADD COLUMN `hash_sha256` TEXT;
+ALTER TABLE `music` ADD COLUMN `status` TEXT;
+ALTER TABLE `music` ADD COLUMN `is_delete` BOOLEAN NOT NULL DEFAULT FALSE;
+
 
 -- 2025-10-20
 CREATE TABLE `comment` (
@@ -56,7 +66,7 @@ CREATE TABLE `music_history` (
     `update_time` DATETIME NOT NULL
 );
 ALTER TABLE `user` ADD COLUMN `is_delete` BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE `music` ADD COLUMN `is_delete` BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE `comment` ADD COLUMN `is_delete` BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE `user_action_properties` ADD COLUMN `is_delete` BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE `music_history` ADD COLUMN `is_delete` BOOLEAN NOT NULL DEFAULT FALSE;
+

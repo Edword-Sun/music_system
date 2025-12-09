@@ -41,6 +41,8 @@ const MusicPage = () => {
     content: '',
     play_time: '',
     singer_name: '',
+    cover_url: '',
+    source_url: '',
   });
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -83,6 +85,8 @@ const MusicPage = () => {
       content: '',
       play_time: '',
       singer_name: '',
+      cover_url: '',
+      source_url: '',
     });
     setOpenDialog(true);
   };
@@ -96,6 +100,8 @@ const MusicPage = () => {
       content: music.content,
       play_time: music.play_time,
       singer_name: music.singer_name,
+      cover_url: music.cover_url || '',
+      source_url: music.source_url || '',
     });
     setOpenDialog(true);
   };
@@ -167,6 +173,8 @@ const MusicPage = () => {
     setSelectedMusicForUserActionProperties(null);
   };
 
+  const [currentAudioUrl, setCurrentAudioUrl] = useState('');
+
   return (
     <Box sx={{ flexGrow: 1, p: 3, backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
       <Container maxWidth="lg">
@@ -182,6 +190,11 @@ const MusicPage = () => {
             音乐管理
           </Typography>
         </Box>
+        {currentAudioUrl && (
+          <Box sx={{ mb: 2 }}>
+            <audio src={currentAudioUrl} controls style={{ width: '100%' }} />
+          </Box>
+        )}
         <Button
           variant="contained"
           sx={{
@@ -238,7 +251,7 @@ const MusicPage = () => {
                   </CardContent>
                   <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
                     <Box>
-                      <IconButton size="small" sx={{ color: 'white' }}>
+                      <IconButton size="small" sx={{ color: 'white' }} onClick={() => setCurrentAudioUrl(music.source_url || '')}>
                         <PlayArrowIcon />
                       </IconButton>
                       <IconButton size="small" sx={{ color: 'white' }}>
@@ -364,6 +377,28 @@ const MusicPage = () => {
               fullWidth
               variant="outlined"
               value={formData.singer_name}
+              onChange={handleInputChange}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              margin="dense"
+              name="cover_url"
+              label="封面URL"
+              type="text"
+              fullWidth
+              variant="outlined"
+              value={formData.cover_url}
+              onChange={handleInputChange}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              margin="dense"
+              name="source_url"
+              label="音频URL"
+              type="text"
+              fullWidth
+              variant="outlined"
+              value={formData.source_url}
               onChange={handleInputChange}
               sx={{ mb: 2 }}
             />
