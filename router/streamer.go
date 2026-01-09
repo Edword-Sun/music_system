@@ -1,49 +1,90 @@
 package router
 
 import (
-	"fmt"
+	"github.com/gin-gonic/gin"
+	"log"
+	"music_system/model"
+	"music_system/router/handler"
 	"music_system/service"
+	"music_system/tool"
+	"music_system/tool/filter"
 	"music_system/tool/music_storage_path"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/gin-gonic/gin"
 )
 
-// 模拟数据库（实际项目中替换为你的 DB 查询）
-var mockTrackDB = map[string]string{
-	"123": "a3/a3f8c2b1.mp3",
-	"456": "7b/7b12e9f0.flac",
+//// 模拟数据库（实际项目中替换为你的 DB 查询）
+//var mockTrackDB = map[string]string{
+//	"123": "a3/a3f8c2b1.mp3",
+//	"456": "7b/7b12e9f0.flac",
+//}
+//
+//// 从数据库获取存储路径（替换为你的真实逻辑）
+//func getStoragePath(trackID string) (string, error) {
+//	if path, exists := mockTrackDB[trackID]; exists {
+//		return path, nil
+//	}
+//	return "", fmt.Errorf("track not found")
+//}
+
+type StreamerHandler struct {
+	svc *service.StreamerService
 }
 
-// 从数据库获取存储路径（替换为你的真实逻辑）
-func getStoragePath(trackID string) (string, error) {
-	if path, exists := mockTrackDB[trackID]; exists {
-		return path, nil
+func NewStreamerHandler(svc *service.StreamerService) *StreamerHandler {
+	return &StreamerHandler{svc: svc}
+}
+
+func (h *StreamerHandler) Init(e *gin.Engine) {
+	g := e.Group("/streamer")
+	{
+		g.POST("/audio", h.StreamAudio)
+		g.POST("/add", h.CreateStreamer)
+		//g.POST("/find", h.FindStreamer)
+		g.POST("/update", h.UpdateStreamer)
+		g.POST("/s_delete", h.SoftDeleteStreamer)
 	}
-	return "", fmt.Errorf("track not found")
 }
 
 // 音频流处理函数
-func streamAudio(c *gin.Context) {
-	trackID := c.Query("trackId")
-	if trackID == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "trackId is required"})
+func (h *StreamerHandler) StreamAudio(c *gin.Context) {
+	var req handler.StreamerAudioReq
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, tool.Response{
+			Message: "参数错误",
+			Body:    err,
+		})
+		return
+	}
+	if len(req.ID) <= 0 {
+		c.JSON(http.StatusBadRequest, tool.Response{
+			Message: "参数id为空，有问题",
+			Body:    nil,
+		})
 		return
 	}
 
 	// 1. 查询存储路径
-	relPath, err := getStoragePath(trackID)
+	condition := filter.FindStreamer{
+		ID: req.ID,
+	}
+	streamer, err := h.svc.FindStreamer(&condition)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "track not found"})
+		log.Println(err)
+		c.JSON(http.StatusBadRequest, tool.Response{
+			Message: "查找错误",
+			Body:    err,
+		})
 		return
 	}
 
 	// 2. 安全校验：防止路径穿越（关键！）
+	relPath := streamer.StoragePath
 	if strings.Contains(relPath, "..") || strings.HasPrefix(relPath, "/") || strings.HasPrefix(relPath, "\\") {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid path"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid path"})
 		return
 	}
 
@@ -75,31 +116,89 @@ func streamAudio(c *gin.Context) {
 	c.File(fullPath)
 }
 
-//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-type StreamerHandler struct {
-	svc *service.StreamerService
-}
-
-func NewStreamerHandler(svc *service.StreamerService) *StreamerHandler {
-	return &StreamerHandler{svc: svc}
-}
-
-func (h *StreamerHandler) Init(e *gin.Engine) {
-	g := e.Group("/streamer")
-	{
-		g.POST("/add", h.CreateStreamer)
-		//g.POST("/find", h.FindStreamer)
-		//g.POST("/update", h.UpdateStreamer)
-		//g.POST("/delete", h.DeleteStreamer)
-	}
-}
-
 func (h *StreamerHandler) CreateStreamer(c *gin.Context) {
+	var data model.Streamer
+	err := c.ShouldBindJSON(&data)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusBadRequest, tool.Response{
+			Message: "参数错误",
+			Body:    err,
+		})
+		return
+	}
 
+	err = h.svc.CreateStreamer(&data)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusBadRequest, tool.Response{
+			Message: "添加错误",
+			Body:    err,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "成功",
+		Body:    nil,
+	})
+}
+
+func (h *StreamerHandler) FindStreamer(c *gin.Context) {
+	//var req handler.FindStreamerReq
+}
+
+func (h *StreamerHandler) UpdateStreamer(c *gin.Context) {
+	var data model.Streamer
+	err := c.ShouldBindJSON(&data)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusBadRequest, tool.Response{
+			Message: "参数错误",
+			Body:    err,
+		})
+		return
+	}
+
+	err = h.svc.UpdateStreamer(&data)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "更新错误",
+			Body:    err,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "成功",
+		Body:    nil,
+	})
+}
+
+func (h *StreamerHandler) SoftDeleteStreamer(c *gin.Context) {
+	var req handler.DeleteStreamerReq
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusBadRequest, tool.Response{
+			Message: "参数错误",
+			Body:    err,
+		})
+		return
+	}
+
+	err = h.svc.DeleteStreamer(req.ID)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "删除错误",
+			Body:    err,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "成功",
+		Body:    nil,
+	})
 }
