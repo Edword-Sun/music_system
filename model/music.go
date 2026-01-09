@@ -21,6 +21,7 @@ type Music struct {
 	HashSHA256  string `gorm:"type:text" json:"hash_sha256"`
 	Status      string `gorm:"type:text" json:"status"`
 	IsDelete    bool   `gorm:"type:boolean" json:"is_delete"`
+	VisitCount  int    `gorm:"type:integer;default:0" json:"visit_count"`
 
 	CreateTime time.Time `gorm:"type:DATETIME with time zone;not null" json:"create_time"`
 	UpdateTime time.Time `gorm:"type:DATETIME with time zone;not null" json:"update_time"`

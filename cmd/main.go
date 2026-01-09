@@ -1,6 +1,9 @@
 package main
 
 import (
+	"music_system/tool/music_storage_path"
+	"os"
+
 	"github.com/gin-gonic/gin"
 
 	"music_system/config"
@@ -10,6 +13,11 @@ import (
 )
 
 func main() {
+	// 确保目录存在（可选）
+	if err := os.MkdirAll(music_storage_path.MusicRoot, 0755); err != nil {
+		panic("Failed to create music directory: " + err.Error())
+	}
+
 	// Initialize database connection
 	config.InitDB()
 

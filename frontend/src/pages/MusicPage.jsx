@@ -43,6 +43,7 @@ const MusicPage = () => {
     singer_name: '',
     cover_url: '',
     source_url: '',
+    visit_count: 0,
   });
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -87,6 +88,7 @@ const MusicPage = () => {
       singer_name: '',
       cover_url: '',
       source_url: '',
+      visit_count: 0,
     });
     setOpenDialog(true);
   };
@@ -102,6 +104,7 @@ const MusicPage = () => {
       singer_name: music.singer_name,
       cover_url: music.cover_url || '',
       source_url: music.source_url || '',
+      visit_count: music.visit_count || 0,
     });
     setOpenDialog(true);
   };
@@ -174,6 +177,28 @@ const MusicPage = () => {
   };
 
   const [currentAudioUrl, setCurrentAudioUrl] = useState('');
+
+  const handlePlayMusic = async (music) => {
+    setCurrentAudioUrl(music.source_url || '');
+    try {
+      // 1. 获取最新音乐数据
+      const response = await findMusic({ id: music.id });
+      const latestMusic = response.body;
+      if (latestMusic) {
+        // 2. 点击次数加一
+        const updatedMusic = {
+          ...latestMusic,
+          visit_count: (latestMusic.visit_count || 0) + 1
+        };
+        // 3. 修改
+        await updateMusic(updatedMusic);
+        // 刷新列表以显示新的点击次数
+        fetchMusic();
+      }
+    } catch (error) {
+      console.error('更新播放次数失败:', error);
+    }
+  };
 
   return (
     <Box sx={{ flexGrow: 1, p: 3, backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
@@ -248,10 +273,13 @@ const MusicPage = () => {
                     <Typography variant="body2" color="text.secondary" sx={{ color: '#b3b3b3' }}>
                       歌手姓名: {music.singer_name}
                     </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ color: '#1DB954', fontWeight: 'bold', mt: 1 }}>
+                      播放次数: {music.visit_count || 0}
+                    </Typography>
                   </CardContent>
                   <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
                     <Box>
-                      <IconButton size="small" sx={{ color: 'white' }} onClick={() => setCurrentAudioUrl(music.source_url || '')}>
+                      <IconButton size="small" sx={{ color: 'white' }} onClick={() => handlePlayMusic(music)}>
                         <PlayArrowIcon />
                       </IconButton>
                       <IconButton size="small" sx={{ color: 'white' }}>
