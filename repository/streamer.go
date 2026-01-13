@@ -42,16 +42,13 @@ func (repo *StreamerRepository) Update(data *model.Streamer) error {
 
 func (repo *StreamerRepository) Delete(id string) error {
 	query := repo.db.Model(&model.Streamer{})
-	err := query.Updates(&model.Streamer{
-		ID:        id,
-		IsDeleted: true,
-	}).Error
+	err := query.Delete(&model.Streamer{ID: id}).Error
 	if err != nil {
 		log.Println(err)
 		return errors.New("内部错误")
 	}
 
-	log.Println("软删除成功")
+	log.Println("删除成功")
 	return nil
 }
 
@@ -68,9 +65,6 @@ func (repo *StreamerRepository) Find(filter *filter.FindStreamer) (*model.Stream
 	}
 	if len(filter.Format) > 0 {
 		query = query.Where("format = ?", filter.Format)
-	}
-	if filter.ActiveIsDelete {
-		query = query.Where("is_deleted = ?", filter.ActiveIsDelete)
 	}
 	if !filter.StartTime.IsZero() && !filter.EndTime.IsZero() {
 		query = query.Where("create_time BETWEEN ? AND ?", filter.StartTime, filter.EndTime)
@@ -89,7 +83,7 @@ func (repo *StreamerRepository) List(offset, limit int) ([]model.Streamer, int64
 	var streamers []model.Streamer
 	var total int64
 
-	query := repo.db.Model(&model.Streamer{}).Where("is_deleted = ?", false).Order("create_time DESC")
+	query := repo.db.Model(&model.Streamer{}).Order("create_time DESC")
 
 	if err := query.Count(&total).Error; err != nil {
 		log.Println("err", err)
@@ -105,32 +99,32 @@ func (repo *StreamerRepository) List(offset, limit int) ([]model.Streamer, int64
 	return streamers, total, nil
 }
 
-func (repo *StreamerRepository) RealDelete(id string) error {
-	exists := model.Streamer{}
-
-	query := repo.db.Model(&model.Streamer{})
-	query = query.Where("id = ?", id)
-	err := query.First(&exists).Error
-	if err != nil {
-		log.Println(err)
-		return errors.New("查找存在的数据过程中，出现错误")
-	}
-	if len(exists.ID) <= 0 {
-		log.Println("数据不存在")
-		return errors.New("数据不存在")
-	}
-
-	if exists.IsDeleted == true {
-		queryDelete := repo.db.Model(&model.Streamer{})
-		err = queryDelete.Delete(&model.Streamer{ID: id}).Error
-		if err != nil {
-			log.Println(err)
-			return errors.New("内部错误")
-		}
-		log.Println("删除成功")
-		return nil
-	} else {
-		log.Println("数据没有软删除过")
-		return errors.New("数据没有软删除过")
-	}
-}
+//func (repo *StreamerRepository) RealDelete(id string) error {
+//	exists := model.Streamer{}
+//
+//	query := repo.db.Model(&model.Streamer{})
+//	query = query.Where("id = ?", id)
+//	err := query.First(&exists).Error
+//	if err != nil {
+//		log.Println(err)
+//		return errors.New("查找存在的数据过程中，出现错误")
+//	}
+//	if len(exists.ID) <= 0 {
+//		log.Println("数据不存在")
+//		return errors.New("数据不存在")
+//	}
+//
+//	if exists.IsDeleted == true {
+//		queryDelete := repo.db.Model(&model.Streamer{})
+//		err = queryDelete.Delete(&model.Streamer{ID: id}).Error
+//		if err != nil {
+//			log.Println(err)
+//			return errors.New("内部错误")
+//		}
+//		log.Println("删除成功")
+//		return nil
+//	} else {
+//		log.Println("数据没有软删除过")
+//		return errors.New("数据没有软删除过")
+//	}
+//}

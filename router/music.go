@@ -31,9 +31,9 @@ func (h *MusicHandler) Init(engine *gin.Engine) {
 		g.POST("/find", h.FindMusic)
 		g.POST("/list", h.ListMusic)
 
-		g.POST("", h.CreateMusic)
-		g.PUT("", h.UpdateMusic)
-		g.DELETE("/", h.DeleteMusic)
+		g.POST("/add", h.CreateMusic)
+		g.PUT("/update", h.UpdateMusic)
+		g.DELETE("/delete", h.DeleteMusic)
 	}
 
 }

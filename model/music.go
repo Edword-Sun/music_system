@@ -12,12 +12,6 @@ type Music struct {
 	Album      string `gorm:"type:text" json:"album"`
 	Band       string `gorm:"type:text" json:"band"`
 
-	//DurationMs  int    `gorm:"type:integer" json:"duration_ms"`
-	//MimeType    string `gorm:"type:text" json:"mime_type"`
-	//BitrateKbps int    `gorm:"type:integer" json:"bitrate_kbps"`
-	//FileSize    int64  `gorm:"type:bigint" json:"file_size"`
-	//HashSHA256  string `gorm:"type:text" json:"hash_sha256"
-
 	StreamerID string `gorm:"type:text" json:"streamer_id"`
 
 	CreateTime time.Time `gorm:"type:DATETIME with time zone;not null" json:"create_time"`

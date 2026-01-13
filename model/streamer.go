@@ -7,7 +7,7 @@ import (
 )
 
 type Streamer struct {
-	ID           string `gorm:"type:text;default:((UUID))" json:"id"`
+	ID           string `gorm:"primarykey;type:text;default:((UUID))" json:"id"`
 	StoragePath  string `gorm:"type:text" json:"storage_path"` // 示例: "a3/a3f8c2b1.mp3"
 	OriginalName string `gorm:"type:text" json:"original_name"`
 	Format       string `gorm:"type:text" json:"format"` // "mp3", "flac", etc.

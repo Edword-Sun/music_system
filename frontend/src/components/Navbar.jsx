@@ -1,51 +1,21 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
-import { useAuth } from '../context/AuthContext';
+import { AppBar, Toolbar, Typography, Container } from '@mui/material';
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
   return (
-    <AppBar position="static">
-      <Toolbar>
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-            Music System
-          </Link>
-        </Typography>
-        {user && (
-          <Box sx={{ mr: 2 }}>
-            <Button color="inherit" component={Link} to="/music">音乐</Button>
-            <Button color="inherit" component={Link} to="/user">用户</Button>
-            <Button color="inherit" component={Link} to="/comments">评论</Button>
-            <Button color="inherit" component={Link} to="/favorites">收藏</Button>
-            <Button color="inherit" component={Link} to="/history">历史</Button>
-          </Box>
-        )}
-        {user ? (
-          <>
-            <Typography variant="body1" sx={{ mr: 2 }}>
-              欢迎，{user.name || user.account}
-            </Typography>
-            <Button
-              color="inherit"
-              onClick={() => { logout(); navigate('/login'); }}
-            >
-              退出
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button color="inherit" component={Link} to="/login">
-              Login
-            </Button>
-            <Button color="inherit" component={Link} to="/register">
-              Register
-            </Button>
-          </>
-        )}
-      </Toolbar>
+    <AppBar position="static" elevation={0} sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.12)' }}>
+      <Container maxWidth="lg">
+        <Toolbar disableGutters>
+          <Typography
+            variant="h6"
+            noWrap
+            component="div"
+            sx={{ flexGrow: 1, fontWeight: 700, color: 'primary.main' }}
+          >
+            极简音乐系统
+          </Typography>
+        </Toolbar>
+      </Container>
     </AppBar>
   );
 };

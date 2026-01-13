@@ -10,7 +10,4 @@ type FindStreamer struct {
 
 	StartTime time.Time `json:"start_time"`
 	EndTime   time.Time `json:"end_time"`
-
-	ActiveIsDelete bool `json:"active_is_delete"`
-	IsDeleted      bool `json:"is_deleted"`
 }

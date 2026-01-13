@@ -33,12 +33,10 @@ func (h *StreamerHandler) Init(e *gin.Engine) {
 	{
 		g.GET("/audio", h.StreamAudio)   // 改为 GET 协议
 		g.POST("/upload", h.UploadAudio) // 新增上传接口
-		g.POST("/add", h.CreateStreamer)
 		g.POST("/list", h.ListStreamer)
 		g.POST("/find", h.FindStreamer)
 		g.POST("/update", h.UpdateStreamer)
-		g.POST("/delete", h.RealDeleteStreamer)
-		g.POST("/s_delete", h.SoftDeleteStreamer)
+		g.POST("/delete", h.DeleteStreamer)
 	}
 }
 
@@ -188,34 +186,6 @@ func (h *StreamerHandler) UploadAudio(c *gin.Context) {
 	})
 }
 
-func (h *StreamerHandler) CreateStreamer(c *gin.Context) {
-	var data model.Streamer
-	err := c.ShouldBindJSON(&data)
-	if err != nil {
-		log.Println(err)
-		c.JSON(http.StatusBadRequest, tool.Response{
-			Message: "参数错误",
-			Body:    err,
-		})
-		return
-	}
-
-	err = h.svc.CreateStreamer(&data)
-	if err != nil {
-		log.Println(err)
-		c.JSON(http.StatusBadRequest, tool.Response{
-			Message: "添加错误",
-			Body:    err,
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, tool.Response{
-		Message: "成功",
-		Body:    nil,
-	})
-}
-
 func (h *StreamerHandler) ListStreamer(c *gin.Context) {
 	var req handler.ListStreamerReq
 	err := c.ShouldBindJSON(&req)
@@ -317,7 +287,7 @@ func (h *StreamerHandler) UpdateStreamer(c *gin.Context) {
 	})
 }
 
-func (h *StreamerHandler) SoftDeleteStreamer(c *gin.Context) {
+func (h *StreamerHandler) DeleteStreamer(c *gin.Context) {
 	var req handler.DeleteStreamerReq
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
@@ -334,33 +304,6 @@ func (h *StreamerHandler) SoftDeleteStreamer(c *gin.Context) {
 		log.Println(err)
 		c.JSON(http.StatusOK, tool.Response{
 			Message: "删除错误",
-			Body:    err,
-		})
-		return
-	}
-	c.JSON(http.StatusOK, tool.Response{
-		Message: "成功",
-		Body:    nil,
-	})
-}
-
-func (h *StreamerHandler) RealDeleteStreamer(c *gin.Context) {
-	var req handler.DeleteStreamerReq
-	err := c.ShouldBindJSON(&req)
-	if err != nil {
-		log.Println(err)
-		c.JSON(http.StatusBadRequest, tool.Response{
-			Message: "参数错误",
-			Body:    err,
-		})
-		return
-	}
-
-	err = h.svc.RealDeleteStreamer(req.ID)
-	if err != nil {
-		log.Println(err)
-		c.JSON(http.StatusOK, tool.Response{
-			Message: "硬删除错误",
 			Body:    err,
 		})
 		return

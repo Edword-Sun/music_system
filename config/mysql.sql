@@ -1,11 +1,10 @@
 -- 2025-10-16
 CREATE TABLE music (
     id VARCHAR(255) PRIMARY KEY DEFAULT (UUID()),
+    singer_name TEXT,
     name TEXT,
     album TEXT,
     band TEXT,
-
-    format TEXT,
     streamer_id VARCHAR(255),
     create_time DATETIME NOT NULL,
     update_time DATETIME NOT NULL
@@ -26,6 +25,6 @@ CREATE TABLE `streamer` (
     `original_name` TEXT NOT NULL,
     `format` VARCHAR(50),
     `create_time` DATETIME NOT NULL,
-    `update_time` DATETIME NOT NULL,
+    `update_time` DATETIME NOT NULL
 );
 

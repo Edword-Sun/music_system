@@ -51,14 +51,6 @@ func (svc *StreamerService) DeleteStreamer(id string) error {
 	return nil
 }
 
-func (svc *StreamerService) RealDeleteStreamer(id string) error {
-	err := svc.repo.RealDelete(id)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (svc *StreamerService) ListStreamer(page, size int) ([]model.Streamer, int64, error) {
 	offset := (page - 1) * size
 	return svc.repo.List(offset, size)
