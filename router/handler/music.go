@@ -5,7 +5,3 @@ type DeleteMusicReq struct {
 }
 type DeleteMusicResp struct {
 }
-
-type AddVisitorsReq struct {
-	ID string `json:"id"`
-}

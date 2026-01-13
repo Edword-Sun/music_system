@@ -44,9 +44,6 @@ func (repo *MusicHistoryRepository) FindMusicHistory(findMusicHistory filter.Fin
 	if len(findMusicHistory.ID) > 0 {
 		query = query.Where("id = ?", findMusicHistory.ID)
 	}
-	if len(findMusicHistory.UserID) > 0 {
-		query = query.Where("user_id = ?", findMusicHistory.UserID)
-	}
 	if len(findMusicHistory.MusicID) > 0 {
 		query = query.Where("music_id = ?", findMusicHistory.MusicID)
 	}
@@ -86,14 +83,8 @@ func (repo *MusicHistoryRepository) ListMusicHistory(condition filter.ListMusicH
 	if len(condition.IDs) > 0 {
 		query = query.Where("id IN (?)", condition.IDs)
 	}
-	if len(condition.UserIDs) > 0 {
-		query = query.Where("user_id IN (?)", condition.UserIDs)
-	}
 	if len(condition.MusicIDs) > 0 {
 		query = query.Where("music_id IN (?)", condition.MusicIDs)
-	}
-	if len(condition.Descriptions) > 0 {
-		query = query.Where("description IN (?)", condition.Descriptions)
 	}
 
 	startTime := time.UnixMilli(condition.StartTime)

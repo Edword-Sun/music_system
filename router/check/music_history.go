@@ -31,7 +31,6 @@ func CheckFindMusicHistoryReq(req handler.FindMusicHistoryReq) (error, filter.Fi
 
 	res = filter.FindMusicHistory{
 		ID:        req.ID,
-		UserID:    req.UserID,
 		MusicID:   req.MusicID,
 		StartTime: req.StartTime,
 		EndTime:   req.EndTime,
@@ -62,14 +61,12 @@ func CheckListMusicHistoryReq(req handler.ListMusicHistoryReq) (error, filter.Li
 	}
 
 	res = filter.ListMusicHistory{
-		IDs:          req.IDs,
-		MusicIDs:     req.MusicIDs,
-		UserIDs:      req.UserIDs,
-		Descriptions: req.Descriptions,
-		StartTime:    req.StartTime,
-		EndTime:      req.EndTime,
-		Limit:        req.Size,
-		Offset:       (req.Page - 1) * req.Size,
+		IDs:       req.IDs,
+		MusicIDs:  req.MusicIDs,
+		StartTime: req.StartTime,
+		EndTime:   req.EndTime,
+		Limit:     req.Size,
+		Offset:    (req.Page - 1) * req.Size,
 	}
 
 	return nil, res
@@ -83,23 +80,12 @@ func CheckAddMusicHistoryReq(req handler.AddMusicHistoryReq) (error, model.Music
 		log.Println("musicID缺失")
 		return errors.New("musicID缺失"), res
 	}
-	// userID必填
-	if len(req.UserID) == 0 {
-		log.Println("userID缺失")
-		return errors.New("userID缺失"), res
-	}
-	// description必填
-	if len(req.Description) == 0 {
-		return errors.New("description缺失"), res
-	}
 
 	res = model.MusicHistory{
-		ID:          uuid.NewV4().String(),
-		MusicID:     req.MusicID,
-		UserID:      req.UserID,
-		Description: req.Description,
-		CreateTime:  time.Now(),
-		UpdateTime:  time.Now(),
+		ID:         uuid.NewV4().String(),
+		MusicID:    req.MusicID,
+		CreateTime: time.Now(),
+		UpdateTime: time.Now(),
 	}
 
 	return nil, res
@@ -114,10 +100,8 @@ func CheckUpdateMusicHistoryReq(req *handler.UpdateMusicHistoryReq) (error, mode
 	}
 
 	res = model.MusicHistory{
-		ID:          req.ID,
-		MusicID:     req.MusicID,
-		UserID:      req.UserID,
-		Description: req.Description,
+		ID:      req.ID,
+		MusicID: req.MusicID,
 	}
 
 	return nil, res
