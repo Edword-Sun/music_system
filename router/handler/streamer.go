@@ -16,8 +16,9 @@ type DeleteStreamerReq struct {
 }
 
 type ListStreamerReq struct {
-	Page int `json:"page"`
-	Size int `json:"size"`
+	Page       int    `json:"page"`
+	Size       int    `json:"size"`
+	SearchName string `json:"search_name"`
 }
 
 type ListStreamerResp struct {

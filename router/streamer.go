@@ -205,7 +205,7 @@ func (h *StreamerHandler) ListStreamer(c *gin.Context) {
 		req.Size = 10
 	}
 
-	data, total, err := h.svc.ListStreamer(req.Page, req.Size)
+	data, total, err := h.svc.ListStreamer(req.Page, req.Size, req.SearchName)
 	if err != nil {
 		log.Println(err)
 		c.JSON(http.StatusOK, tool.Response{

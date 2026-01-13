@@ -51,7 +51,7 @@ func (svc *StreamerService) DeleteStreamer(id string) error {
 	return nil
 }
 
-func (svc *StreamerService) ListStreamer(page, size int) ([]model.Streamer, int64, error) {
+func (svc *StreamerService) ListStreamer(page, size int, searchName string) ([]model.Streamer, int64, error) {
 	offset := (page - 1) * size
-	return svc.repo.List(offset, size)
+	return svc.repo.List(offset, size, searchName)
 }

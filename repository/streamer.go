@@ -79,11 +79,17 @@ func (repo *StreamerRepository) Find(filter *filter.FindStreamer) (*model.Stream
 	return &res, nil
 }
 
-func (repo *StreamerRepository) List(offset, limit int) ([]model.Streamer, int64, error) {
+func (repo *StreamerRepository) List(offset, limit int, searchName string) ([]model.Streamer, int64, error) {
 	var streamers []model.Streamer
 	var total int64
 
-	query := repo.db.Model(&model.Streamer{}).Order("create_time DESC")
+	query := repo.db.Model(&model.Streamer{})
+
+	if len(searchName) > 0 {
+		query = query.Where("original_name LIKE ?", "%"+searchName+"%")
+	}
+
+	query = query.Order("create_time DESC")
 
 	if err := query.Count(&total).Error; err != nil {
 		log.Println("err", err)

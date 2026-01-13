@@ -22,6 +22,11 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Autocomplete,
 } from '@mui/material';
 import {
   PlayArrow as PlayArrowIcon,
@@ -49,6 +54,7 @@ const Dashboard = () => {
   const [musicList, setMusicList] = useState([]);
   const [historyList, setHistoryList] = useState([]);
   const [streamerList, setStreamerList] = useState([]);
+  const [streamerSearch, setStreamerSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [dialogMode, setDialogMode] = useState('create');
@@ -103,10 +109,10 @@ const Dashboard = () => {
     }
   };
 
-  const fetchStreamers = async () => {
+  const fetchStreamers = async (searchName = '') => {
     setLoading(true);
     try {
-      const res = await listStreamers({ page: 1, size: 100 });
+      const res = await listStreamers({ page: 1, size: 100, search_name: searchName });
       setStreamerList(res.body.data || []);
     } catch (error) {
       showSnackbar('获取 Streamer 列表失败', 'error');
@@ -127,6 +133,7 @@ const Dashboard = () => {
     setDialogMode('create');
     setFormData({ id: '', name: '', singer_name: '', album: '', band: '', streamer_id: '' });
     setOpenDialog(true);
+    fetchStreamers(); // 打开弹窗时获取最新的 streamer 列表
   };
 
   const handleOpenEdit = (music) => {
@@ -140,6 +147,7 @@ const Dashboard = () => {
       streamer_id: music.streamer_id || '',
     });
     setOpenDialog(true);
+    fetchStreamers(); // 打开弹窗时获取最新的 streamer 列表
   };
 
   const handleCloseDialog = () => {
@@ -147,7 +155,46 @@ const Dashboard = () => {
   };
 
   const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    // 如果改变的是 streamer_id，尝试解析文件名并自动填入
+    if (name === 'streamer_id' && value) {
+      const selectedStreamer = streamerList.find(s => s.id === value);
+      if (selectedStreamer) {
+        autoFillFromFileName(selectedStreamer.original_name);
+      }
+    }
+  };
+
+  const autoFillFromFileName = (fileName) => {
+    if (!fileName) return;
+
+    // 1. 移除后缀
+    const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
+
+    // 2. 尝试按常见分隔符拆分
+    const separators = [/ - /, /-/, /_/, / — /];
+    let parts = [nameWithoutExt];
+
+    for (const sep of separators) {
+      const split = nameWithoutExt.split(sep);
+      if (split.length >= 2) {
+        parts = split.map(p => p.trim());
+        break;
+      }
+    }
+
+    setFormData(prev => {
+      const updated = { ...prev };
+      if (parts.length >= 2) {
+        if (!prev.singer_name) updated.singer_name = parts[0];
+        if (!prev.name) updated.name = parts[1];
+      } else {
+        if (!prev.name) updated.name = parts[0];
+      }
+      return updated;
+    });
   };
 
   const handleFileUpload = async (e) => {
@@ -160,6 +207,8 @@ const Dashboard = () => {
       if (res.body && res.body.id) {
         setFormData({ ...formData, streamer_id: res.body.id });
         showSnackbar('文件上传成功');
+        fetchStreamers(); // 上传成功后刷新列表，确保下拉框能匹配到新上传的音频
+        autoFillFromFileName(file.name); // 自动填入文件名解析结果
       } else {
         showSnackbar('上传失败：未返回 ID', 'error');
       }
@@ -376,10 +425,21 @@ const Dashboard = () => {
 
       {tabValue === 2 && (
         <Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
             <Typography variant="h5">Streamer 管理</Typography>
-            <Box>
-              <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchStreamers} sx={{ mr: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <TextField
+                size="small"
+                placeholder="搜索 Streamer 名称..."
+                value={streamerSearch}
+                onChange={(e) => setStreamerSearch(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    fetchStreamers(streamerSearch);
+                  }
+                }}
+              />
+              <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => fetchStreamers(streamerSearch)}>
                 刷新
               </Button>
               <Button
@@ -464,21 +524,38 @@ const Dashboard = () => {
               value={formData.band}
               onChange={handleInputChange}
             />
+            <Autocomplete
+              fullWidth
+              options={streamerList}
+              getOptionLabel={(option) => option.original_name ? `${option.original_name} (${option.id.substring(0, 8)}...)` : ''}
+              value={streamerList.find(s => s.id === formData.streamer_id) || null}
+              onChange={(event, newValue) => {
+                handleInputChange({
+                  target: {
+                    name: 'streamer_id',
+                    value: newValue ? newValue.id : ''
+                  }
+                });
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="选择音频 (Streamer)"
+                  placeholder="搜索音频名称..."
+                />
+              )}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              noOptionsText="未找到相关音频"
+            />
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <TextField
-                name="streamer_id"
-                label="音频 ID"
-                fullWidth
-                disabled
-                value={formData.streamer_id}
-              />
               <Button
-                variant="contained"
+                variant="outlined"
                 component="label"
+                fullWidth
                 disabled={uploading}
                 startIcon={uploading ? <CircularProgress size={20} /> : <UploadIcon />}
               >
-                上传
+                或直接上传新音频
                 <input type="file" hidden accept="audio/*" onChange={handleFileUpload} />
               </Button>
             </Box>
