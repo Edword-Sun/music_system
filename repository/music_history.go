@@ -92,9 +92,6 @@ func (repo *MusicHistoryRepository) ListMusicHistory(condition filter.ListMusicH
 	if len(condition.MusicIDs) > 0 {
 		query = query.Where("music_id IN (?)", condition.MusicIDs)
 	}
-	if len(condition.Titles) > 0 {
-		query = query.Where("title IN (?)", condition.Titles)
-	}
 	if len(condition.Descriptions) > 0 {
 		query = query.Where("description IN (?)", condition.Descriptions)
 	}

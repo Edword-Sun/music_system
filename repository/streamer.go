@@ -72,7 +72,9 @@ func (repo *StreamerRepository) Find(filter *filter.FindStreamer) (*model.Stream
 	if filter.ActiveIsDelete {
 		query = query.Where("is_deleted = ?", filter.ActiveIsDelete)
 	}
-	query = query.Where("create_time BETWEEN ? AND ?", filter.StartTime, filter.EndTime)
+	if !filter.StartTime.IsZero() && !filter.EndTime.IsZero() {
+		query = query.Where("create_time BETWEEN ? AND ?", filter.StartTime, filter.EndTime)
+	}
 
 	res := model.Streamer{}
 	err := query.Find(&res).Error
@@ -81,6 +83,26 @@ func (repo *StreamerRepository) Find(filter *filter.FindStreamer) (*model.Stream
 		return nil, errors.New("内部错误")
 	}
 	return &res, nil
+}
+
+func (repo *StreamerRepository) List(offset, limit int) ([]model.Streamer, int64, error) {
+	var streamers []model.Streamer
+	var total int64
+
+	query := repo.db.Model(&model.Streamer{}).Where("is_deleted = ?", false).Order("create_time DESC")
+
+	if err := query.Count(&total).Error; err != nil {
+		log.Println("err", err)
+		return nil, 0, err
+	}
+
+	err := query.Offset(offset).Limit(limit).Find(&streamers).Error
+	if err != nil {
+		log.Println("err", err)
+		return nil, 0, err
+	}
+
+	return streamers, total, nil
 }
 
 func (repo *StreamerRepository) RealDelete(id string) error {

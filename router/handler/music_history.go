@@ -18,7 +18,6 @@ type ListMusicHistoryReq struct {
 	IDs          []string `json:"ids"`
 	MusicIDs     []string `json:"music_ids"`
 	UserIDs      []string `json:"user_ids"`
-	Titles       []string `json:"titles"`
 	Descriptions []string `json:"descriptions"`
 
 	StartTime int64 `json:"start_time"`
@@ -37,7 +36,6 @@ type AddMusicHistoryReq struct {
 	UserID  string `json:"user_id"`
 
 	// 音乐条目的基本信息
-	Title       string `json:"title"`       // 标题
 	Description string `json:"description"` // 详情
 }
 type AddMusicHistoryResp struct {
@@ -50,7 +48,6 @@ type UpdateMusicHistoryReq struct {
 	UserID  string `json:"user_id"`
 
 	// 音乐条目的基本信息
-	Title       string `json:"title"`       // 标题
 	Description string `json:"description"` // 详情
 }
 type UpdateMusicHistoryResp struct{}

@@ -56,7 +56,7 @@ export default function MusicHistoryPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [dialogMode, setDialogMode] = useState('create');
   const [editingRow, setEditingRow] = useState(null);
-  const [form, setForm] = useState({ title: '', description: '', music_id: '', user_id: '' });
+  const [form, setForm] = useState({ description: '', music_id: '', user_id: '' });
   const [musics, setMusics] = useState([]);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -101,7 +101,7 @@ export default function MusicHistoryPage() {
   const handleOpenCreate = () => {
     setDialogMode('create');
     setEditingRow(null);
-    setForm({ title: '', description: '', music_id: '', user_id: user?.id || '' });
+    setForm({ description: '', music_id: '', user_id: user?.id || '' });
     setOpenDialog(true);
     loadMusics();
   };
@@ -109,7 +109,7 @@ export default function MusicHistoryPage() {
   const handleOpenEdit = (row) => {
     setDialogMode('edit');
     setEditingRow(row);
-    setForm({ id: row.id, title: row.title || '', description: row.description || '', music_id: row.music_id || '', user_id: row.user_id || '' });
+    setForm({ id: row.id, description: row.description || '', music_id: row.music_id || '', user_id: row.user_id || '' });
     setOpenDialog(true);
     loadMusics();
   };
@@ -124,12 +124,12 @@ export default function MusicHistoryPage() {
   const handleSave = async () => {
     try {
       if (dialogMode === 'create') {
-        const payload = { title: form.title, description: form.description, music_id: form.music_id, user_id: user?.id || form.user_id };
+        const payload = { description: form.description, music_id: form.music_id, user_id: user?.id || form.user_id };
         const resp = await addMusicHistory(payload);
         const msg = resp?.message || '添加成功';
         showSnackbar(msg, 'success');
       } else {
-        const payload = { id: form.id, title: form.title, description: form.description, music_id: form.music_id, user_id: form.user_id };
+        const payload = { id: form.id, description: form.description, music_id: form.music_id, user_id: form.user_id };
         const resp = await updateMusicHistory(payload);
         const msg = resp?.message || '更新成功';
         showSnackbar(msg, 'success');
@@ -210,7 +210,6 @@ export default function MusicHistoryPage() {
             <TableHead>
               <TableRow>
                 <TableCell>ID</TableCell>
-                <TableCell>标题</TableCell>
                 <TableCell>详情</TableCell>
                 <TableCell>音乐ID</TableCell>
                 <TableCell>用户ID</TableCell>
@@ -223,7 +222,6 @@ export default function MusicHistoryPage() {
               {rows.map((r) => (
                 <TableRow key={r.id} hover>
                   <TableCell>{r.id}</TableCell>
-                  <TableCell>{r.title}</TableCell>
                   <TableCell>{r.description}</TableCell>
                   <TableCell>{r.music_id}</TableCell>
                   <TableCell>{r.user_id}</TableCell>
@@ -257,17 +255,6 @@ export default function MusicHistoryPage() {
             <TextField
               autoFocus
               margin="dense"
-              name="title"
-              label="标题"
-              type="text"
-              fullWidth
-              variant="outlined"
-              value={form.title}
-              onChange={handleFormChange}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              margin="dense"
               name="description"
               label="详情"
               type="text"
@@ -297,7 +284,7 @@ export default function MusicHistoryPage() {
                     sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5, cursor: 'pointer', '&:hover': { bgcolor: '#333' } }}
                     onClick={() => setForm((prev) => ({ ...prev, music_id: m.id }))}
                   >
-                    <Typography variant="body2">{m.title}</Typography>
+                    <Typography variant="body2">{m.name}</Typography>
                     <Typography variant="caption" sx={{ color: '#b3b3b3' }}>{m.id}</Typography>
                   </Box>
                 ))}

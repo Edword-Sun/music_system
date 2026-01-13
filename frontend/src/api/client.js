@@ -123,3 +123,14 @@ export async function updateMusicHistory(data) {
 export async function deleteMusicHistory(id) {
   return request('/mh/delete', { method: 'POST', json: { id } })
 }
+
+// 音频上传相关
+export async function uploadAudio(file) {
+  const formData = new FormData();
+  formData.append('audio', file);
+  const res = await fetch(BASE + '/streamer/upload', {
+    method: 'POST',
+    body: formData,
+  });
+  return await res.json();
+}

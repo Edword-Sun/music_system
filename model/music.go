@@ -7,13 +7,11 @@ import (
 
 type Music struct {
 	ID          string `gorm:"primarykey type:text;default:(UUID())" json:"id"`
-	Title       string `gorm:"type:text" json:"title"`
 	Description string `gorm:"type:text" json:"description"`
-	Content     string `gorm:"type:text" json:"content"`
-	PlayTime    string `gorm:"type:text" json:"play_time"`
 	SingerName  string `gorm:"type:text" json:"singer_name"`
-	CoverURL    string `gorm:"type:text" json:"cover_url"`
-	SourceURL   string `gorm:"type:text" json:"source_url"`
+	Name        string `gorm:"type:text" json:"name"`
+	Album       string `gorm:"type:text" json:"album"`
+	Band        string `gorm:"type:text" json:"band"`
 	DurationMs  int    `gorm:"type:integer" json:"duration_ms"`
 	MimeType    string `gorm:"type:text" json:"mime_type"`
 	BitrateKbps int    `gorm:"type:integer" json:"bitrate_kbps"`
@@ -22,6 +20,7 @@ type Music struct {
 	Status      string `gorm:"type:text" json:"status"`
 	IsDelete    bool   `gorm:"type:boolean" json:"is_delete"`
 	VisitCount  int    `gorm:"type:integer;default:0" json:"visit_count"`
+	StreamerID  string `gorm:"type:text" json:"streamer_id"`
 
 	CreateTime time.Time `gorm:"type:DATETIME with time zone;not null" json:"create_time"`
 	UpdateTime time.Time `gorm:"type:DATETIME with time zone;not null" json:"update_time"`

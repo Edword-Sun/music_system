@@ -1,6 +1,8 @@
 package service
 
 import (
+	uuid "github.com/satori/go.uuid"
+
 	"music_system/model"
 	"music_system/repository"
 	"music_system/tool/filter"
@@ -15,6 +17,9 @@ func NewStreamerService(repo *repository.StreamerRepository) *StreamerService {
 }
 
 func (svc *StreamerService) CreateStreamer(streamer *model.Streamer) error {
+	if streamer.ID == "" {
+		streamer.ID = uuid.NewV4().String()
+	}
 	err := svc.repo.Create(streamer)
 	if err != nil {
 		return err
@@ -44,4 +49,17 @@ func (svc *StreamerService) DeleteStreamer(id string) error {
 		return err
 	}
 	return nil
+}
+
+func (svc *StreamerService) RealDeleteStreamer(id string) error {
+	err := svc.repo.RealDelete(id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (svc *StreamerService) ListStreamer(page, size int) ([]model.Streamer, int64, error) {
+	offset := (page - 1) * size
+	return svc.repo.List(offset, size)
 }

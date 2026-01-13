@@ -39,10 +39,6 @@ func (repo *MusicRepository) Find(music *model.Music) (error, *model.Music) {
 		query = query.Where("id = ?", music.ID)
 		//hasCondition = true
 	}
-	if len(music.Title) > 0 {
-		query = query.Where("title = ?", music.Title)
-		//hasCondition = true
-	}
 	if len(music.SingerName) > 0 {
 		query = query.Where("singer_name = ?", music.SingerName)
 		//hasCondition = true

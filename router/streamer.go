@@ -1,33 +1,24 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
+	"crypto/sha256"
+	"encoding/hex"
+	"io"
 	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+
 	"music_system/model"
 	"music_system/router/handler"
 	"music_system/service"
 	"music_system/tool"
 	"music_system/tool/filter"
 	"music_system/tool/music_storage_path"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
 )
-
-//// 模拟数据库（实际项目中替换为你的 DB 查询）
-//var mockTrackDB = map[string]string{
-//	"123": "a3/a3f8c2b1.mp3",
-//	"456": "7b/7b12e9f0.flac",
-//}
-//
-//// 从数据库获取存储路径（替换为你的真实逻辑）
-//func getStoragePath(trackID string) (string, error) {
-//	if path, exists := mockTrackDB[trackID]; exists {
-//		return path, nil
-//	}
-//	return "", fmt.Errorf("track not found")
-//}
 
 type StreamerHandler struct {
 	svc *service.StreamerService
@@ -40,26 +31,21 @@ func NewStreamerHandler(svc *service.StreamerService) *StreamerHandler {
 func (h *StreamerHandler) Init(e *gin.Engine) {
 	g := e.Group("/streamer")
 	{
-		g.POST("/audio", h.StreamAudio)
+		g.GET("/audio", h.StreamAudio)   // 改为 GET 协议
+		g.POST("/upload", h.UploadAudio) // 新增上传接口
 		g.POST("/add", h.CreateStreamer)
-		//g.POST("/find", h.FindStreamer)
+		g.POST("/list", h.ListStreamer)
+		g.POST("/find", h.FindStreamer)
 		g.POST("/update", h.UpdateStreamer)
+		g.POST("/delete", h.RealDeleteStreamer)
 		g.POST("/s_delete", h.SoftDeleteStreamer)
 	}
 }
 
 // 音频流处理函数
 func (h *StreamerHandler) StreamAudio(c *gin.Context) {
-	var req handler.StreamerAudioReq
-	err := c.ShouldBindJSON(&req)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, tool.Response{
-			Message: "参数错误",
-			Body:    err,
-		})
-		return
-	}
-	if len(req.ID) <= 0 {
+	id := c.Query("id")
+	if len(id) <= 0 {
 		c.JSON(http.StatusBadRequest, tool.Response{
 			Message: "参数id为空，有问题",
 			Body:    nil,
@@ -69,13 +55,13 @@ func (h *StreamerHandler) StreamAudio(c *gin.Context) {
 
 	// 1. 查询存储路径
 	condition := filter.FindStreamer{
-		ID: req.ID,
+		ID: id,
 	}
 	streamer, err := h.svc.FindStreamer(&condition)
-	if err != nil {
+	if err != nil || streamer == nil || streamer.ID == "" {
 		log.Println(err)
-		c.JSON(http.StatusBadRequest, tool.Response{
-			Message: "查找错误",
+		c.JSON(http.StatusNotFound, tool.Response{
+			Message: "未找到音频记录",
 			Body:    err,
 		})
 		return
@@ -88,7 +74,7 @@ func (h *StreamerHandler) StreamAudio(c *gin.Context) {
 		return
 	}
 
-	// 3. 拼接完整 Windows 路径（filepath.Join 自动处理 \）
+	// 3. 拼接完整 Windows 路径
 	fullPath := filepath.Join(music_storage_path.MusicRoot, filepath.FromSlash(relPath))
 
 	// 4. 检查文件是否存在
@@ -112,8 +98,94 @@ func (h *StreamerHandler) StreamAudio(c *gin.Context) {
 	c.Header("Content-Type", contentType)
 	c.Header("Accept-Ranges", "bytes")
 
-	// 7. 使用 Gin 的 File 方法（底层调用 http.ServeContent，自动处理 Range）
+	// 7. 使用 Gin 的 File 方法
 	c.File(fullPath)
+}
+
+func (h *StreamerHandler) UploadAudio(c *gin.Context) {
+	header, err := c.FormFile("audio")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, tool.Response{
+			Message: "文件上传失败",
+			Body:    err.Error(),
+		})
+		return
+	}
+
+	// 打开文件以读取内容
+	file, err := header.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, tool.Response{
+			Message: "无法打开上传的文件",
+			Body:    err.Error(),
+		})
+		return
+	}
+	defer file.Close()
+
+	// 计算文件哈希
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		c.JSON(http.StatusInternalServerError, tool.Response{
+			Message: "哈希计算失败",
+			Body:    err.Error(),
+		})
+		return
+	}
+	hashSum := hex.EncodeToString(hash.Sum(nil))
+
+	// 获取文件后缀
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	if ext == "" {
+		ext = ".mp3" // 默认 mp3
+	}
+
+	// 生成相对存储路径 (例如: a3/a3f8c2b1.mp3)
+	relDir := hashSum[:2]
+	relPath := filepath.Join(relDir, hashSum+ext)
+	fullDir := filepath.Join(music_storage_path.MusicRoot, relDir)
+	fullPath := filepath.Join(music_storage_path.MusicRoot, relPath)
+
+	// 创建目录
+	if err := os.MkdirAll(fullDir, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, tool.Response{
+			Message: "目录创建失败",
+			Body:    err.Error(),
+		})
+		return
+	}
+
+	// 如果文件不存在则保存
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		if err := c.SaveUploadedFile(header, fullPath); err != nil {
+			c.JSON(http.StatusInternalServerError, tool.Response{
+				Message: "文件保存失败",
+				Body:    err.Error(),
+			})
+			return
+		}
+	}
+
+	// 保存记录到数据库
+	streamer := &model.Streamer{
+		StoragePath:  filepath.ToSlash(relPath),
+		OriginalName: header.Filename,
+		Format:       strings.TrimPrefix(ext, "."),
+	}
+
+	err = h.svc.CreateStreamer(streamer)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, tool.Response{
+			Message: "数据库记录创建失败",
+			Body:    err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "上传成功",
+		Body:    streamer,
+	})
 }
 
 func (h *StreamerHandler) CreateStreamer(c *gin.Context) {
@@ -144,8 +216,77 @@ func (h *StreamerHandler) CreateStreamer(c *gin.Context) {
 	})
 }
 
+func (h *StreamerHandler) ListStreamer(c *gin.Context) {
+	var req handler.ListStreamerReq
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusBadRequest, tool.Response{
+			Message: "参数错误",
+			Body:    err,
+		})
+		return
+	}
+
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Size <= 0 {
+		req.Size = 10
+	}
+
+	data, total, err := h.svc.ListStreamer(req.Page, req.Size)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "查询列表错误",
+			Body:    err,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "成功",
+		Body: handler.ListStreamerResp{
+			Total: total,
+			Data:  data,
+		},
+	})
+}
+
 func (h *StreamerHandler) FindStreamer(c *gin.Context) {
-	//var req handler.FindStreamerReq
+	var req handler.FindStreamerReq
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusBadRequest, tool.Response{
+			Message: "参数错误",
+			Body:    err,
+		})
+		return
+	}
+
+	condition := filter.FindStreamer{
+		ID:           req.ID,
+		StoragePath:  req.StoragePath,
+		OriginalName: req.OriginalName,
+		Format:       req.Format,
+	}
+
+	data, err := h.svc.FindStreamer(&condition)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "查找错误",
+			Body:    err,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "成功",
+		Body:    data,
+	})
 }
 
 func (h *StreamerHandler) UpdateStreamer(c *gin.Context) {
@@ -193,6 +334,33 @@ func (h *StreamerHandler) SoftDeleteStreamer(c *gin.Context) {
 		log.Println(err)
 		c.JSON(http.StatusOK, tool.Response{
 			Message: "删除错误",
+			Body:    err,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "成功",
+		Body:    nil,
+	})
+}
+
+func (h *StreamerHandler) RealDeleteStreamer(c *gin.Context) {
+	var req handler.DeleteStreamerReq
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusBadRequest, tool.Response{
+			Message: "参数错误",
+			Body:    err,
+		})
+		return
+	}
+
+	err = h.svc.RealDeleteStreamer(req.ID)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "硬删除错误",
 			Body:    err,
 		})
 		return

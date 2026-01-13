@@ -13,7 +13,6 @@ type ListMusicHistory struct {
 	IDs          []string `json:"ids"`
 	MusicIDs     []string `json:"music_ids"`
 	UserIDs      []string `json:"user_ids"`
-	Titles       []string `json:"titles"`
 	Descriptions []string `json:"descriptions"`
 
 	StartTime int64 `json:"start_time"`

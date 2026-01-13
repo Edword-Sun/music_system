@@ -65,7 +65,6 @@ func CheckListMusicHistoryReq(req handler.ListMusicHistoryReq) (error, filter.Li
 		IDs:          req.IDs,
 		MusicIDs:     req.MusicIDs,
 		UserIDs:      req.UserIDs,
-		Titles:       req.Titles,
 		Descriptions: req.Descriptions,
 		StartTime:    req.StartTime,
 		EndTime:      req.EndTime,
@@ -89,10 +88,6 @@ func CheckAddMusicHistoryReq(req handler.AddMusicHistoryReq) (error, model.Music
 		log.Println("userID缺失")
 		return errors.New("userID缺失"), res
 	}
-	// title必填
-	if len(req.Title) == 0 {
-		return errors.New("title缺失"), res
-	}
 	// description必填
 	if len(req.Description) == 0 {
 		return errors.New("description缺失"), res
@@ -102,7 +97,6 @@ func CheckAddMusicHistoryReq(req handler.AddMusicHistoryReq) (error, model.Music
 		ID:          uuid.NewV4().String(),
 		MusicID:     req.MusicID,
 		UserID:      req.UserID,
-		Title:       req.Title,
 		Description: req.Description,
 		CreateTime:  time.Now(),
 		UpdateTime:  time.Now(),
@@ -123,7 +117,6 @@ func CheckUpdateMusicHistoryReq(req *handler.UpdateMusicHistoryReq) (error, mode
 		ID:          req.ID,
 		MusicID:     req.MusicID,
 		UserID:      req.UserID,
-		Title:       req.Title,
 		Description: req.Description,
 	}
 

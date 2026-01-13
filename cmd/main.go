@@ -27,6 +27,7 @@ func main() {
 	userRepo := repository.NewUserRepository(config.DB)
 	musicRepo := repository.NewMusicRepository(config.DB)
 	commentRepo := repository.NewCommentRepository(config.DB)
+	streamerRepo := repository.NewStreamerRepository(config.DB)
 	userActionPropertiesRepo := repository.NewUserActionProperties(config.DB)
 	musicHistoryRepository := repository.NewMusicHistoryRepository(config.DB)
 
@@ -34,6 +35,7 @@ func main() {
 	userService := service.NewUserService(userRepo)
 	musicService := service.NewMusicService(musicRepo)
 	commentService := service.NewCommentService(commentRepo)
+	streamerService := service.NewStreamerService(streamerRepo)
 	userActionPropertiesService := service.NewUserActionPropertiesService(userActionPropertiesRepo)
 	musicHistoryService := service.NewMusicHistoryService(musicHistoryRepository)
 
@@ -43,6 +45,7 @@ func main() {
 	userHandler := router.NewUserHandler(userService)
 	musicHandler := router.NewMusicHandler(musicService)
 	commentHandler := router.NewCommentHandler(commentService)
+	streamerHandler := router.NewStreamerHandler(streamerService)
 	userActionPropertiesHandler := router.NewUserActionPropertiesHandler(userActionPropertiesService)
 	musicHistoryHandler := router.NewMusicHistoryHandler(musicHistoryService)
 
@@ -50,6 +53,7 @@ func main() {
 	userHandler.Init(r)
 	musicHandler.Init(r)
 	commentHandler.Init(r)
+	streamerHandler.Init(r)
 	userActionPropertiesHandler.Init(r)
 	musicHistoryHandler.Init(r)
 
