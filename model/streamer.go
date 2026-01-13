@@ -14,7 +14,6 @@ type Streamer struct {
 
 	CreateTime time.Time `gorm:"type:datetime" json:"create_time"`
 	UpdateTime time.Time `gorm:"type:datetime" json:"update_time"`
-	IsDeleted  bool      `gorm:"type:boolean" json:"is_deleted"`
 }
 
 func (m *Streamer) TableName() string {
@@ -25,7 +24,6 @@ func (m *Streamer) BeforeCreate(tx *gorm.DB) (err error) {
 	m.CreateTime = time.Now()
 	m.UpdateTime = time.Now()
 
-	m.IsDeleted = false
 	return nil
 }
 

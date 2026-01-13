@@ -15,7 +15,7 @@ func GetDatabaseConfig() DatabaseConfig {
 		Port:     "3306",
 		User:     "root",
 		Password: "root",
-		DBName:   "music_system",
+		DBName:   "personal_music_system",
 		Charset:  "utf8mb4",
 	}
 }

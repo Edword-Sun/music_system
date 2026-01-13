@@ -34,7 +34,6 @@ func (h *MusicHandler) Init(engine *gin.Engine) {
 		g.POST("", h.CreateMusic)
 		g.PUT("", h.UpdateMusic)
 		g.DELETE("/", h.DeleteMusic)
-		g.POST("/add_visitors", h.AddVisitors)
 	}
 
 }
@@ -210,56 +209,4 @@ func (h *MusicHandler) DeleteMusic(c *gin.Context) {
 		Message: "删除成功",
 		Body:    nil,
 	})
-}
-func (h *MusicHandler) AddVisitors(c *gin.Context) {
-	var req handler.AddVisitorsReq
-
-	err := c.ShouldBindJSON(&req)
-	if err != nil {
-		c.JSON(http.StatusOK, tool.Response{
-			Message: "参数错误",
-			Body:    nil,
-		})
-		return
-	}
-	if len(req.ID) <= 0 {
-		c.JSON(http.StatusOK, tool.Response{
-			Message: "参数错误",
-			Body:    nil,
-		})
-		return
-	}
-
-	err, existMusic := h.musicService.FindMusic(&model.Music{ID: req.ID})
-	if err != nil {
-		c.JSON(http.StatusOK, tool.Response{
-			Message: "查找错误",
-			Body:    nil,
-		})
-		return
-	}
-	if len(existMusic.ID) <= 0 {
-		c.JSON(http.StatusOK, tool.Response{
-			Message: "查找到的music id为空，有问题",
-			Body:    nil,
-		})
-		return
-	}
-
-	existMusic.VisitCount += 1
-
-	err = h.musicService.UpdateMusic(existMusic)
-	if err != nil {
-		c.JSON(http.StatusOK, tool.Response{
-			Message: "existMusic Visitor加一时出现错误",
-			Body:    nil,
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, tool.Response{
-		Message: "成功",
-		Body:    nil,
-	})
-	return
 }

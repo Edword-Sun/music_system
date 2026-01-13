@@ -7,12 +7,9 @@ import (
 )
 
 type MusicHistory struct {
-	ID      string `gorm:"primarykey type:text;default:(UUID())" json:"id"`
-	MusicID string `gorm:"type:text" json:"music_id"`
-	UserID  string `gorm:"type:text" json:"user_id"`
+	ID string `gorm:"primarykey type:text;default:(UUID())" json:"id"`
 
-	// 音乐条目的基本信息
-	Description string `gorm:"type:text" json:"description"` // 详情
+	MusicID string `gorm:"type:text" json:"music_id"`
 
 	CreateTime time.Time `gorm:"type:DATETIME with time zone;not null" json:"create_time"`
 	UpdateTime time.Time `gorm:"type:DATETIME with time zone;not null" json:"update_time"`
