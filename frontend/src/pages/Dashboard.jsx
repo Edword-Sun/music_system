@@ -27,13 +27,33 @@ import {
   FormControl,
   InputLabel,
   Autocomplete,
+  Slider,
+  Stack,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  ListItemButton,
+  Divider,
+  Tooltip,
 } from '@mui/material';
 import {
   PlayArrow as PlayArrowIcon,
+  Pause as PauseIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   CloudUpload as UploadIcon,
   Refresh as RefreshIcon,
+  SkipNext as SkipNextIcon,
+  SkipPrevious as SkipPreviousIcon,
+  VolumeUp as VolumeUpIcon,
+  GraphicEq as AudioIcon,
+  LibraryMusic as MusicIcon,
+  History as HistoryIcon,
+  SettingsVoice as StreamerIcon,
+  ChevronLeft as ChevronLeftIcon,
+  Menu as MenuIcon,
 } from '@mui/icons-material';
 import {
   listMusics,
@@ -68,6 +88,11 @@ const Dashboard = () => {
   });
   const [uploading, setUploading] = useState(false);
   const [currentAudio, setCurrentAudio] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [currentMusic, setCurrentMusic] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -84,6 +109,55 @@ const Dashboard = () => {
       fetchStreamers();
     }
   }, [tabValue]);
+
+  useEffect(() => {
+    if (currentAudio) {
+      const updateTime = () => setCurrentTime(currentAudio.currentTime);
+      const updateDuration = () => setDuration(currentAudio.duration);
+      const handleEnded = () => {
+        setIsPlaying(false);
+        playNext(); // 自动播放下一首
+      };
+
+      currentAudio.addEventListener('timeupdate', updateTime);
+      currentAudio.addEventListener('durationchange', updateDuration);
+      currentAudio.addEventListener('ended', handleEnded);
+      currentAudio.addEventListener('play', () => setIsPlaying(true));
+      currentAudio.addEventListener('pause', () => setIsPlaying(false));
+
+      return () => {
+        currentAudio.removeEventListener('timeupdate', updateTime);
+        currentAudio.removeEventListener('durationchange', updateDuration);
+        currentAudio.removeEventListener('ended', handleEnded);
+        currentAudio.removeEventListener('play', () => setIsPlaying(true));
+        currentAudio.removeEventListener('pause', () => setIsPlaying(false));
+      };
+    }
+  }, [currentAudio]);
+
+  const togglePlay = () => {
+    if (currentAudio) {
+      if (isPlaying) {
+        currentAudio.pause();
+      } else {
+        currentAudio.play();
+      }
+    }
+  };
+
+  const handleSliderChange = (event, newValue) => {
+    if (currentAudio) {
+      currentAudio.currentTime = newValue;
+      setCurrentTime(newValue);
+    }
+  };
+
+  const formatTime = (seconds) => {
+    if (!seconds || isNaN(seconds)) return '00:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const fetchMusic = async () => {
     setLoading(true);
@@ -115,7 +189,7 @@ const Dashboard = () => {
       const res = await listStreamers({ page: 1, size: 100, search_name: searchName });
       setStreamerList(res.body.data || []);
     } catch (error) {
-      showSnackbar('获取 Streamer 列表失败', 'error');
+      showSnackbar('获取音乐流列表失败', 'error');
     } finally {
       setLoading(false);
     }
@@ -258,7 +332,7 @@ const Dashboard = () => {
   };
 
   const handleDeleteStreamer = async (id) => {
-    if (window.confirm('确定要删除这个 Streamer 吗？')) {
+    if (window.confirm('确定要删除这个音乐流吗？')) {
       try {
         await deleteStreamer(id);
         showSnackbar('删除成功');
@@ -277,7 +351,7 @@ const Dashboard = () => {
     try {
       const res = await uploadAudio(file);
       if (res.body && res.body.id) {
-        showSnackbar('Streamer 创建成功，ID: ' + res.body.id);
+        showSnackbar('音乐流创建成功，ID: ' + res.body.id);
         if (tabValue === 2) {
           fetchStreamers();
         }
@@ -305,6 +379,10 @@ const Dashboard = () => {
     const audio = new Audio(url);
     audio.play().catch(e => showSnackbar('播放失败', 'error'));
     setCurrentAudio(audio);
+    setCurrentMusic(music);
+    setIsPlaying(true);
+    setCurrentTime(0);
+    setDuration(0);
 
     // 记录播放历史
     try {
@@ -314,182 +392,415 @@ const Dashboard = () => {
     }
   };
 
+  const playNext = () => {
+    if (!currentMusic || musicList.length === 0) return;
+    const currentIndex = musicList.findIndex(m => m.id === currentMusic.id);
+    if (currentIndex === -1) return;
+    
+    const nextIndex = (currentIndex + 1) % musicList.length;
+    playMusic(musicList[nextIndex]);
+  };
+
+  const playPrevious = () => {
+    if (!currentMusic || musicList.length === 0) return;
+    const currentIndex = musicList.findIndex(m => m.id === currentMusic.id);
+    if (currentIndex === -1) return;
+    
+    const prevIndex = (currentIndex - 1 + musicList.length) % musicList.length;
+    playMusic(musicList[prevIndex]);
+  };
+
+  const drawerWidth = 240;
+  const collapsedDrawerWidth = 64;
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Paper sx={{ width: '100%', mb: 2 }}>
-        <Tabs value={tabValue} onChange={handleTabChange} centered>
-          <Tab label="音乐库" />
-          <Tab label="播放历史" />
-          <Tab label="Streamers" />
-        </Tabs>
-      </Paper>
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <Drawer
+        variant="permanent"
+        sx={{
+          width: sidebarOpen ? drawerWidth : collapsedDrawerWidth,
+          transition: 'width 0.3s',
+          '& .MuiDrawer-paper': {
+            width: sidebarOpen ? drawerWidth : collapsedDrawerWidth,
+            transition: 'width 0.3s',
+            boxSizing: 'border-box',
+            overflowX: 'hidden',
+            borderRight: 'none',
+            backgroundColor: '#fff',
+            boxShadow: '4px 0 24px rgba(0,0,0,0.02)',
+          },
+        }}
+      >
+        <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: sidebarOpen ? 'space-between' : 'center' }}>
+          {sidebarOpen && (
+            <Typography variant="h6" sx={{ 
+              fontWeight: 800, 
+              background: 'linear-gradient(45deg, #FF7675 30%, #FAB1A0 90%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: 1
+            }}>
+              MUSIC POP
+            </Typography>
+          )}
+          <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ backgroundColor: '#F7F9FC' }}>
+            {sidebarOpen ? <ChevronLeftIcon /> : <MenuIcon />}
+          </IconButton>
+        </Box>
+        <Box sx={{ px: 2, mt: 2 }}>
+          <List sx={{ '& .MuiListItem-root': { mb: 1 } }}>
+            {[
+              { label: '音乐库', icon: <MusicIcon />, value: 0 },
+              { label: '播放历史', icon: <HistoryIcon />, value: 1 },
+              { label: '音乐流', icon: <StreamerIcon />, value: 2 },
+            ].map((item) => (
+              <ListItem key={item.value} disablePadding sx={{ display: 'block' }}>
+                <Tooltip title={!sidebarOpen ? item.label : ''} placement="right">
+                  <ListItemButton
+                    selected={tabValue === item.value}
+                    onClick={() => setTabValue(item.value)}
+                    sx={{
+                      minHeight: 48,
+                      justifyContent: sidebarOpen ? 'initial' : 'center',
+                      px: 2.5,
+                      borderRadius: 3,
+                      mx: 1,
+                      '&.Mui-selected': {
+                        backgroundColor: 'primary.main',
+                        color: '#fff',
+                        '&:hover': {
+                          backgroundColor: 'primary.dark',
+                        },
+                        '& .MuiListItemIcon-root': {
+                          color: '#fff',
+                        },
+                      },
+                      '&:hover:not(.Mui-selected)': {
+                        backgroundColor: 'rgba(255, 118, 117, 0.12)',
+                      }
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        minWidth: 0,
+                        mr: sidebarOpen ? 2 : 'auto',
+                        justifyContent: 'center',
+                        color: tabValue === item.value ? 'inherit' : 'text.secondary',
+                      }}
+                    >
+                      {item.icon}
+                    </ListItemIcon>
+                    {sidebarOpen && (
+                      <ListItemText 
+                        primary={item.label} 
+                        primaryTypographyProps={{ 
+                          fontWeight: tabValue === item.value ? 800 : 600,
+                          fontSize: '0.95rem'
+                        }} 
+                      />
+                    )}
+                  </ListItemButton>
+                </Tooltip>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      </Drawer>
 
-      {tabValue === 0 && (
-        <Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h5">音乐管理</Typography>
-            <Box>
-              <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchMusic} sx={{ mr: 1 }}>
+      <Container 
+        maxWidth="lg" 
+        sx={{ 
+          mt: 4, 
+          mb: 12, 
+          flexGrow: 1, 
+          transition: 'margin 0.3s',
+          width: '100%',
+        }}
+      >
+        {/* 内容区域开始 */}
+        {tabValue === 0 && (
+          <Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
+              <Typography variant="h5">音乐管理</Typography>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchMusic}>
+                  刷新
+                </Button>
+                <Button variant="contained" startIcon={<UploadIcon />} onClick={handleOpenCreate}>
+                  新增音乐
+                </Button>
+              </Box>
+            </Box>
+
+            <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>歌名</TableCell>
+                    <TableCell>歌手</TableCell>
+                    <TableCell>专辑</TableCell>
+                    <TableCell>乐队</TableCell>
+                    <TableCell align="right">操作</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {loading ? (
+                    <TableRow><TableCell colSpan={5} align="center" sx={{ py: 8 }}><CircularProgress /></TableCell></TableRow>
+                  ) : musicList.length === 0 ? (
+                    <TableRow><TableCell colSpan={5} align="center" sx={{ py: 8 }}>暂无音乐</TableCell></TableRow>
+                  ) : (
+                    musicList.map((music) => {
+                      const isPlayingCurrent = currentMusic && currentMusic.id === music.id;
+                      return (
+                        <TableRow 
+                          key={music.id}
+                          hover
+                          sx={{ 
+                            bgcolor: isPlayingCurrent ? 'rgba(255, 118, 117, 0.06)' : 'inherit',
+                            '&:hover': { bgcolor: 'rgba(255, 118, 117, 0.1) !important' }
+                          }}
+                        >
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              {isPlayingCurrent ? (
+                                <Box sx={{ 
+                                  width: 32, height: 32, borderRadius: 2, bgcolor: 'primary.main', 
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                                }}>
+                                  <AudioIcon sx={{ color: '#fff', fontSize: 18 }} />
+                                </Box>
+                              ) : (
+                                <Box sx={{ 
+                                  width: 32, height: 32, borderRadius: 2, bgcolor: 'background.default', 
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                                }}>
+                                  <MusicIcon sx={{ color: 'text.secondary', fontSize: 18 }} />
+                                </Box>
+                              )}
+                              <Typography variant="body2" sx={{ fontWeight: isPlayingCurrent ? 800 : 600 }}>
+                                {music.name}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 500 }}>{music.singer_name}</TableCell>
+                          <TableCell sx={{ color: 'text.secondary' }}>{music.album}</TableCell>
+                          <TableCell sx={{ color: 'text.secondary' }}>{music.band}</TableCell>
+                          <TableCell align="right">
+                            <Stack direction="row" spacing={1.5} justifyContent="flex-end">
+                              <Tooltip title="播放">
+                                <IconButton 
+                                  onClick={() => playMusic(music)} 
+                                  sx={{ 
+                                    bgcolor: 'info.main', 
+                                    color: '#fff',
+                                    '&:hover': { 
+                                      bgcolor: 'info.dark',
+                                      transform: 'scale(1.1)' 
+                                    },
+                                    boxShadow: '0 4px 10px rgba(84, 160, 255, 0.3)',
+                                    transition: 'all 0.2s'
+                                  }}
+                                >
+                                  <PlayArrowIcon />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="编辑">
+                                <IconButton 
+                                  onClick={() => handleOpenEdit(music)} 
+                                  sx={{ 
+                                    bgcolor: 'warning.main', 
+                                    color: '#fff',
+                                    '&:hover': { 
+                                      bgcolor: 'warning.dark',
+                                      transform: 'scale(1.1)' 
+                                    },
+                                    boxShadow: '0 4px 10px rgba(255, 159, 67, 0.3)',
+                                    transition: 'all 0.2s'
+                                  }}
+                                >
+                                  <EditIcon />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="删除">
+                                <IconButton 
+                                  onClick={() => handleDeleteMusic(music.id)} 
+                                  sx={{ 
+                                    bgcolor: 'error.main', 
+                                    color: '#fff',
+                                    '&:hover': { 
+                                      bgcolor: 'error.dark',
+                                      transform: 'scale(1.1)' 
+                                    },
+                                    boxShadow: '0 4px 10px rgba(255, 107, 107, 0.3)',
+                                    transition: 'all 0.2s'
+                                  }}
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        )}
+
+        {tabValue === 1 && (
+          <Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
+              <Typography variant="h5">最近播放</Typography>
+              <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchHistory}>
                 刷新
               </Button>
-              <Button variant="contained" startIcon={<UploadIcon />} onClick={handleOpenCreate}>
-                新增音乐
-              </Button>
             </Box>
+
+            <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>音乐 ID</TableCell>
+                    <TableCell>播放时间</TableCell>
+                    <TableCell align="right">操作</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {loading ? (
+                    <TableRow><TableCell colSpan={3} align="center" sx={{ py: 8 }}><CircularProgress /></TableCell></TableRow>
+                  ) : historyList.length === 0 ? (
+                    <TableRow><TableCell colSpan={3} align="center" sx={{ py: 8 }}>暂无历史记录</TableCell></TableRow>
+                  ) : (
+                    historyList.map((history) => {
+                      const isPlayingCurrent = currentMusic && currentMusic.id === history.music_id;
+                      return (
+                        <TableRow 
+                          key={history.id}
+                          hover
+                          sx={{ 
+                            bgcolor: isPlayingCurrent ? 'rgba(255, 118, 117, 0.06)' : 'inherit',
+                            '&:hover': { bgcolor: 'rgba(255, 118, 117, 0.1) !important' }
+                          }}
+                        >
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <HistoryIcon sx={{ color: 'text.secondary' }} />
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                {history.music_id}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{new Date(history.create_time).toLocaleString()}</TableCell>
+                          <TableCell align="right">
+                            <IconButton color="error" onClick={() => handleDeleteHistory(history.id)} sx={{ bgcolor: 'rgba(255, 118, 117, 0.05)' }}>
+                              <DeleteIcon />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Box>
+        )}
 
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>歌名</TableCell>
-                  <TableCell>歌手</TableCell>
-                  <TableCell>专辑</TableCell>
-                  <TableCell>乐队</TableCell>
-                  <TableCell align="right">操作</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow><TableCell colSpan={5} align="center"><CircularProgress /></TableCell></TableRow>
-                ) : musicList.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} align="center">暂无音乐</TableCell></TableRow>
-                ) : (
-                  musicList.map((music) => (
-                    <TableRow key={music.id}>
-                      <TableCell>{music.name}</TableCell>
-                      <TableCell>{music.singer_name}</TableCell>
-                      <TableCell>{music.album}</TableCell>
-                      <TableCell>{music.band}</TableCell>
-                      <TableCell align="right">
-                        <IconButton color="primary" onClick={() => playMusic(music)}>
-                          <PlayArrowIcon />
-                        </IconButton>
-                        <IconButton color="info" onClick={() => handleOpenEdit(music)}>
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton color="error" onClick={() => handleDeleteMusic(music.id)}>
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      )}
-
-      {tabValue === 1 && (
-        <Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h5">最近播放</Typography>
-            <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchHistory}>
-              刷新
-            </Button>
-          </Box>
-
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>音乐 ID</TableCell>
-                  <TableCell>播放时间</TableCell>
-                  <TableCell align="right">操作</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow><TableCell colSpan={3} align="center"><CircularProgress /></TableCell></TableRow>
-                ) : historyList.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} align="center">暂无历史记录</TableCell></TableRow>
-                ) : (
-                  historyList.map((history) => (
-                    <TableRow key={history.id}>
-                      <TableCell>{history.music_id}</TableCell>
-                      <TableCell>{new Date(history.create_time).toLocaleString()}</TableCell>
-                      <TableCell align="right">
-                        <IconButton color="error" onClick={() => handleDeleteHistory(history.id)}>
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      )}
-
-      {tabValue === 2 && (
-        <Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
-            <Typography variant="h5">Streamer 管理</Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <TextField
-                size="small"
-                placeholder="搜索 Streamer 名称..."
-                value={streamerSearch}
-                onChange={(e) => setStreamerSearch(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    fetchStreamers(streamerSearch);
-                  }
-                }}
-              />
-              <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => fetchStreamers(streamerSearch)}>
-                刷新
-              </Button>
-              <Button
-                variant="contained"
-                component="label"
-                disabled={uploading}
-                startIcon={uploading ? <CircularProgress size={20} /> : <UploadIcon />}
-              >
-                创建 Streamer
-                <input type="file" hidden accept="audio/*" onChange={handleStreamerUpload} />
-              </Button>
+        {tabValue === 2 && (
+          <Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
+              <Typography variant="h5">音乐流管理</Typography>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  size="small"
+                  placeholder="搜索音乐流名称..."
+                  value={streamerSearch}
+                  onChange={(e) => setStreamerSearch(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      fetchStreamers(streamerSearch);
+                    }
+                  }}
+                  sx={{ 
+                    '& .MuiOutlinedInput-root': { 
+                      borderRadius: 3,
+                      backgroundColor: '#fff'
+                    } 
+                  }}
+                />
+                <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => fetchStreamers(streamerSearch)}>
+                  刷新
+                </Button>
+                <Button
+                  variant="contained"
+                  component="label"
+                  disabled={uploading}
+                  startIcon={uploading ? <CircularProgress size={20} /> : <UploadIcon />}
+                >
+                  创建音乐流
+                  <input type="file" hidden accept="audio/*" onChange={handleStreamerUpload} />
+                </Button>
+              </Box>
             </Box>
-          </Box>
 
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>原始文件名</TableCell>
-                  <TableCell>格式</TableCell>
-                  <TableCell>存储路径</TableCell>
-                  <TableCell align="right">操作</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow><TableCell colSpan={5} align="center"><CircularProgress /></TableCell></TableRow>
-                ) : streamerList.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} align="center">暂无 Streamer</TableCell></TableRow>
-                ) : (
-                  streamerList.map((streamer) => (
-                    <TableRow key={streamer.id}>
-                      <TableCell>{streamer.id}</TableCell>
-                      <TableCell>{streamer.original_name}</TableCell>
-                      <TableCell>{streamer.format}</TableCell>
-                      <TableCell>{streamer.storage_path}</TableCell>
-                      <TableCell align="right">
-                        <IconButton color="error" onClick={() => handleDeleteStreamer(streamer.id)}>
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      )}
+            <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>ID</TableCell>
+                    <TableCell>原始文件名</TableCell>
+                    <TableCell>格式</TableCell>
+                    <TableCell>存储路径</TableCell>
+                    <TableCell align="right">操作</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {loading ? (
+                    <TableRow><TableCell colSpan={5} align="center" sx={{ py: 8 }}><CircularProgress /></TableCell></TableRow>
+                  ) : streamerList.length === 0 ? (
+                    <TableRow><TableCell colSpan={5} align="center" sx={{ py: 8 }}>暂无音乐流</TableCell></TableRow>
+                  ) : (
+                    streamerList.map((streamer) => (
+                      <TableRow key={streamer.id} hover sx={{ '&:hover': { bgcolor: 'rgba(255, 118, 117, 0.08) !important' } }}>
+                        <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>{streamer.id.substring(0, 8)}...</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>{streamer.original_name}</TableCell>
+                        <TableCell>
+                          <Box component="span" sx={{ 
+                            px: 1.5, py: 0.5, borderRadius: 2, bgcolor: 'secondary.light', color: '#fff', fontSize: '0.75rem', fontWeight: 800 
+                          }}>
+                            {streamer.format.toUpperCase()}
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>{streamer.storage_path}</TableCell>
+                        <TableCell align="right">
+                          <IconButton 
+                            onClick={() => handleDeleteStreamer(streamer.id)} 
+                            sx={{ 
+                              bgcolor: 'error.main', 
+                              color: '#fff',
+                              '&:hover': { 
+                                bgcolor: 'error.dark',
+                                transform: 'scale(1.1)'
+                              },
+                              boxShadow: '0 4px 10px rgba(255, 107, 107, 0.3)',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        )}
+      </Container>
 
       {/* 新增/编辑对话框 */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
@@ -540,7 +851,7 @@ const Dashboard = () => {
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="选择音频 (Streamer)"
+                  label="选择音频 (音乐流)"
                   placeholder="搜索音频名称..."
                 />
               )}
@@ -578,7 +889,172 @@ const Dashboard = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Container>
+
+      {/* 底部播放器 */}
+      {currentMusic && (
+        <Paper
+          sx={{
+            position: 'fixed',
+            bottom: 24,
+            left: { xs: 16, sm: sidebarOpen ? drawerWidth + 24 : collapsedDrawerWidth + 24 },
+            right: 24,
+            p: 2,
+            bgcolor: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: 3,
+            boxShadow: '0 12px 40px rgba(0,0,0,0.08)',
+            zIndex: 1000,
+            transition: 'left 0.3s',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+          }}
+          elevation={0}
+        >
+          <Container maxWidth="lg">
+            <Stack direction="row" spacing={3} alignItems="center">
+              <Box sx={{ width: 220, overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ 
+                  width: 48, 
+                  height: 48, 
+                  borderRadius: 3, 
+                  background: 'linear-gradient(135deg, #FF7675 0%, #FAB1A0 100%)',
+                   display: 'flex',
+                   alignItems: 'center',
+                   justifyContent: 'center',
+                   boxShadow: '0 4px 12px rgba(255, 118, 117, 0.3)'
+                }}>
+                  <AudioIcon sx={{ color: '#fff' }} />
+                </Box>
+                <Box sx={{ overflow: 'hidden' }}>
+                  <Typography variant="subtitle1" noWrap sx={{ fontWeight: 800, color: 'text.primary' }}>
+                    {currentMusic.name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ fontWeight: 600 }}>
+                    {currentMusic.singer_name}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <IconButton 
+                  onClick={playPrevious} 
+                  disabled={musicList.length <= 1}
+                  sx={{ 
+                    bgcolor: 'primary.main', 
+                    color: '#fff',
+                    '&:hover': { 
+                      bgcolor: 'primary.dark',
+                      transform: 'scale(1.1)',
+                      boxShadow: '0 6px 12px rgba(255, 118, 117, 0.4)'
+                    },
+                    '&.Mui-disabled': {
+                      bgcolor: 'action.disabledBackground',
+                      color: 'action.disabled'
+                    },
+                    boxShadow: '0 4px 10px rgba(255, 118, 117, 0.3)',
+                    transition: 'all 0.2s',
+                    width: 48,
+                    height: 48
+                  }}
+                >
+                  <SkipPreviousIcon />
+                </IconButton>
+
+                <IconButton 
+                  onClick={togglePlay} 
+                  sx={{ 
+                    backgroundColor: 'primary.main', 
+                    color: '#fff',
+                    '&:hover': { 
+                      backgroundColor: 'primary.dark',
+                      transform: 'scale(1.05)',
+                      boxShadow: '0 10px 20px rgba(255, 118, 117, 0.5)'
+                    },
+                    width: 64,
+                    height: 64,
+                    boxShadow: '0 8px 16px rgba(255, 118, 117, 0.4)',
+                    transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                  }}
+                >
+                  {isPlaying ? <PauseIcon sx={{ fontSize: 32 }} /> : <PlayArrowIcon sx={{ fontSize: 32 }} />}
+                </IconButton>
+
+                <IconButton 
+                  onClick={playNext} 
+                  disabled={musicList.length <= 1}
+                  sx={{ 
+                    bgcolor: 'primary.main', 
+                    color: '#fff',
+                    '&:hover': { 
+                      bgcolor: 'primary.dark',
+                      transform: 'scale(1.1)',
+                      boxShadow: '0 6px 12px rgba(255, 118, 117, 0.4)'
+                    },
+                    '&.Mui-disabled': {
+                      bgcolor: 'action.disabledBackground',
+                      color: 'action.disabled'
+                    },
+                    boxShadow: '0 4px 10px rgba(255, 118, 117, 0.3)',
+                    transition: 'all 0.2s',
+                    width: 48,
+                    height: 48
+                  }}
+                >
+                  <SkipNextIcon />
+                </IconButton>
+              </Box>
+
+              <Box sx={{ flexGrow: 1, px: 2 }}>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Typography variant="caption" sx={{ minWidth: 40, fontWeight: 700, color: 'text.secondary' }}>
+                    {formatTime(currentTime)}
+                  </Typography>
+                  <Slider
+                    size="small"
+                    value={currentTime}
+                    max={duration || 0}
+                    onChange={handleSliderChange}
+                    sx={{
+                      flexGrow: 1,
+                      color: 'primary.main',
+                      '& .MuiSlider-thumb': {
+                        width: 16,
+                        height: 16,
+                        backgroundColor: '#fff',
+                        border: '3px solid currentColor',
+                        '&:hover, &.Mui-focusVisible': {
+                          boxShadow: '0 0 0 8px rgba(255, 118, 117, 0.16)',
+                        },
+                      },
+                      '& .MuiSlider-rail': {
+                        opacity: 0.2,
+                      },
+                    }}
+                  />
+                  <Typography variant="caption" sx={{ minWidth: 40, fontWeight: 700, color: 'text.secondary' }}>
+                    {formatTime(duration)}
+                  </Typography>
+                </Stack>
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', width: 140, gap: 1 }}>
+                <VolumeUpIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                <Slider
+                  size="small"
+                  defaultValue={100}
+                  onChange={(e, val) => {
+                    if (currentAudio) currentAudio.volume = val / 100;
+                  }}
+                  sx={{ 
+                    color: 'text.secondary',
+                    '& .MuiSlider-thumb': { width: 12, height: 12 }
+                  }}
+                />
+              </Box>
+            </Stack>
+          </Container>
+        </Paper>
+      )}
+    </Box>
   );
 };
 
