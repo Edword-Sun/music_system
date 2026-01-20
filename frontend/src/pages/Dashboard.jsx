@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -37,6 +37,7 @@ import {
   ListItemButton,
   Divider,
   Tooltip,
+  Fade,
 } from '@mui/material';
 import {
   PlayArrow as PlayArrowIcon,
@@ -69,6 +70,90 @@ import {
   deleteStreamer,
 } from '../api/client';
 
+const ThemeSelector = ({ themes, itemTheme, setItemTheme, customColor, setCustomColor }) => (
+  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', ml: 2 }}>
+    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>配色方案:</Typography>
+    {Object.entries(themes).filter(([key]) => key !== 'CUSTOM').map(([key, theme]) => (
+      <Tooltip 
+        key={key} 
+        title={theme.name} 
+        TransitionComponent={Fade} 
+        TransitionProps={{ timeout: 200 }}
+        arrow
+        placement="top"
+      >
+        <Box
+          onClick={() => setItemTheme(key)}
+          sx={{
+            width: 24,
+            height: 24,
+            borderRadius: '50%',
+            background: `linear-gradient(135deg, ${theme.item} 50%, ${theme.separator} 50%)`,
+            cursor: 'pointer',
+            border: itemTheme === key ? '2px solid #2D3436' : '2px solid transparent',
+            transition: 'all 0.2s',
+            '&:hover': { transform: 'scale(1.2)' }
+          }}
+        />
+      </Tooltip>
+    ))}
+    <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 16, my: 'auto' }} />
+    <Tooltip 
+      title="自定义 RGB 颜色" 
+      TransitionComponent={Fade} 
+      TransitionProps={{ timeout: 200 }}
+      arrow
+      placement="top"
+    >
+      <Box 
+        component="label"
+        htmlFor="custom-color-picker"
+        sx={{ 
+          position: 'relative', 
+          display: 'flex', 
+          alignItems: 'center',
+          cursor: 'pointer'
+        }}
+      >
+        <Box
+          sx={{
+            width: 24,
+            height: 24,
+            borderRadius: '50%',
+            background: customColor,
+            border: itemTheme === 'CUSTOM' ? '2px solid #2D3436' : '2px solid #ddd',
+            transition: 'all 0.2s',
+            '&:hover': { transform: 'scale(1.2)' },
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden'
+          }}
+        >
+          <input
+            id="custom-color-picker"
+            type="color"
+            value={customColor}
+            onInput={(e) => {
+              setCustomColor(e.target.value);
+              setItemTheme('CUSTOM');
+            }}
+            style={{
+              position: 'absolute',
+              opacity: 0,
+              width: '100%',
+              height: '100%',
+              cursor: 'pointer',
+              border: 'none',
+              padding: 0
+            }}
+          />
+        </Box>
+      </Box>
+    </Tooltip>
+  </Box>
+);
+
 const Dashboard = () => {
   const [tabValue, setTabValue] = useState(0);
   const [musicList, setMusicList] = useState([]);
@@ -93,6 +178,21 @@ const Dashboard = () => {
   const [duration, setDuration] = useState(0);
   const [currentMusic, setCurrentMusic] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  
+  // 颜色方案主题状态
+  const [itemTheme, setItemTheme] = useState('A');
+  const [customColor, setCustomColor] = useState('#F28B8B'); // 默认自定义颜色
+
+  const themes = {
+    A: { name: '珊瑚粉', title: '#FF7675', item: '#FF7675', separator: '#54A0FF' },
+    B: { name: '活力橙', title: '#FF7675', item: '#FF9F43', separator: '#54A0FF' },
+    C: { name: '温润粉', title: '#FF7675', item: '#FFB3B3', separator: '#54A0FF' },
+    CUSTOM: { name: '自定义', title: '#FF7675', item: customColor, separator: '#54A0FF' },
+  };
+
+  const getThemeColors = () => themes[itemTheme];
+
+  const cuteFont = '"Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "STHeiti", "SimHei", "YouYuan", sans-serif';
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -105,6 +205,7 @@ const Dashboard = () => {
       fetchMusic();
     } else if (tabValue === 1) {
       fetchHistory();
+      fetchMusic(); // 获取音乐列表以便匹配名称和歌手
     } else {
       fetchStreamers();
     }
@@ -197,6 +298,27 @@ const Dashboard = () => {
 
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
+  };
+
+  const groupedHistory = useMemo(() => {
+    const groups = {};
+    historyList.forEach(history => {
+      const date = new Date(history.create_time).toISOString().split('T')[0];
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(history);
+    });
+    // 按日期倒序排序
+    return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [historyList]);
+
+  const formatDateHeader = (dateStr) => {
+    return dateStr;
+  };
+
+  const getDateColor = (dateStr) => {
+    return getThemeColors().separator;
   };
 
   const handleTabChange = (event, newValue) => {
@@ -521,7 +643,10 @@ const Dashboard = () => {
         {tabValue === 0 && (
           <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
-              <Typography variant="h5">音乐管理</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="h5" sx={{ color: getThemeColors().title }}>音乐管理</Typography>
+                <ThemeSelector themes={themes} itemTheme={itemTheme} setItemTheme={setItemTheme} customColor={customColor} setCustomColor={setCustomColor} />
+              </Box>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchMusic}>
                   刷新
@@ -574,17 +699,33 @@ const Dashboard = () => {
                                   width: 32, height: 32, borderRadius: 2, bgcolor: 'background.default', 
                                   display: 'flex', alignItems: 'center', justifyContent: 'center' 
                                 }}>
-                                  <MusicIcon sx={{ color: 'text.secondary', fontSize: 18 }} />
+                                  <MusicIcon sx={{ color: getThemeColors().item, fontSize: 18 }} />
                                 </Box>
                               )}
-                              <Typography variant="body2" sx={{ fontWeight: isPlayingCurrent ? 800 : 600 }}>
+                              <Typography variant="body2" sx={{ 
+                                fontWeight: isPlayingCurrent ? 800 : 600, 
+                                color: getThemeColors().item,
+                                fontFamily: cuteFont
+                              }}>
                                 {music.name}
                               </Typography>
                             </Box>
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 500 }}>{music.singer_name}</TableCell>
-                          <TableCell sx={{ color: 'text.secondary' }}>{music.album}</TableCell>
-                          <TableCell sx={{ color: 'text.secondary' }}>{music.band}</TableCell>
+                          <TableCell sx={{ 
+                             fontWeight: 700, 
+                             color: getThemeColors().item,
+                             fontFamily: cuteFont
+                           }}>{music.singer_name}</TableCell>
+                           <TableCell sx={{ 
+                             fontWeight: 700,
+                             color: 'text.secondary',
+                             fontFamily: cuteFont
+                           }}>{music.album}</TableCell>
+                           <TableCell sx={{ 
+                             fontWeight: 700,
+                             color: 'text.secondary',
+                             fontFamily: cuteFont
+                           }}>{music.band}</TableCell>
                           <TableCell align="right">
                             <Stack direction="row" spacing={1.5} justifyContent="flex-end">
                               <Tooltip title="播放">
@@ -653,7 +794,10 @@ const Dashboard = () => {
         {tabValue === 1 && (
           <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
-              <Typography variant="h5">最近播放</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="h5" sx={{ color: getThemeColors().title }}>最近播放</Typography>
+                <ThemeSelector themes={themes} itemTheme={itemTheme} setItemTheme={setItemTheme} customColor={customColor} setCustomColor={setCustomColor} />
+              </Box>
               <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchHistory}>
                 刷新
               </Button>
@@ -663,43 +807,111 @@ const Dashboard = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>音乐 ID</TableCell>
+                    <TableCell>音乐名称</TableCell>
+                    <TableCell>作者名</TableCell>
                     <TableCell>播放时间</TableCell>
                     <TableCell align="right">操作</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {loading ? (
-                    <TableRow><TableCell colSpan={3} align="center" sx={{ py: 8 }}><CircularProgress /></TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} align="center" sx={{ py: 8 }}><CircularProgress /></TableCell></TableRow>
                   ) : historyList.length === 0 ? (
-                    <TableRow><TableCell colSpan={3} align="center" sx={{ py: 8 }}>暂无历史记录</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} align="center" sx={{ py: 8 }}>暂无历史记录</TableCell></TableRow>
                   ) : (
-                    historyList.map((history) => {
-                      const isPlayingCurrent = currentMusic && currentMusic.id === history.music_id;
+                    groupedHistory.map(([date, items]) => {
+                      const headerColor = getDateColor(date);
                       return (
-                        <TableRow 
-                          key={history.id}
-                          hover
-                          sx={{ 
-                            bgcolor: isPlayingCurrent ? 'rgba(255, 118, 117, 0.06)' : 'inherit',
-                            '&:hover': { bgcolor: 'rgba(255, 118, 117, 0.1) !important' }
-                          }}
-                        >
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                              <HistoryIcon sx={{ color: 'text.secondary' }} />
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                                {history.music_id}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>{new Date(history.create_time).toLocaleString()}</TableCell>
-                          <TableCell align="right">
-                            <IconButton color="error" onClick={() => handleDeleteHistory(history.id)} sx={{ bgcolor: 'rgba(255, 118, 117, 0.05)' }}>
-                              <DeleteIcon />
-                            </IconButton>
-                          </TableCell>
-                        </TableRow>
+                        <React.Fragment key={date}>
+                          {/* 日期分割标题 */}
+                          <TableRow sx={{ '&:hover': { bgcolor: 'transparent !important' } }}>
+                            <TableCell colSpan={4} sx={{ 
+                              bgcolor: 'transparent', 
+                              py: 2, 
+                              borderBottom: 'none',
+                              pt: 5 // 进一步增加顶部间距，强化呼吸感
+                            }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Typography variant="h6" sx={{ 
+                                  fontWeight: 900, // 加重字重
+                                  color: headerColor, // 使用动态颜色
+                                  fontSize: '1.5rem', // 字体更大一些，更有冲击力
+                                  fontFamily: '"Quicksand", sans-serif',
+                                  textShadow: `2px 2px 0px ${headerColor}22`, // 添加轻微的阴影效果
+                                  letterSpacing: 1
+                                }}>
+                                  {formatDateHeader(date)}
+                                </Typography>
+                                <Box sx={{ 
+                                  flexGrow: 1, 
+                                  height: '3px', 
+                                  background: `linear-gradient(to right, ${headerColor}44, ${headerColor}05)`, 
+                                  borderRadius: 2 
+                                }} />
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                          
+                          {/* 该日期下的记录 */}
+                          {items.map((history) => {
+                            const isPlayingCurrent = currentMusic && currentMusic.id === history.music_id;
+                            const musicInfo = musicList.find(m => m.id === history.music_id) || {};
+                            
+                            return (
+                              <TableRow 
+                                key={history.id}
+                                hover
+                                sx={{ 
+                                  bgcolor: isPlayingCurrent ? 'rgba(255, 118, 117, 0.06)' : 'inherit',
+                                  '&:hover': { bgcolor: 'rgba(255, 118, 117, 0.1) !important' }
+                                }}
+                              >
+                                <TableCell>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <HistoryIcon sx={{ color: getThemeColors().item, fontSize: 18, opacity: 0.7 }} />
+                                    <Typography variant="body2" sx={{ 
+                                      fontWeight: 600, 
+                                      color: getThemeColors().item,
+                                      fontFamily: cuteFont
+                                    }}>
+                                      {musicInfo.name || history.music_id}
+                                    </Typography>
+                                  </Box>
+                                </TableCell>
+                                <TableCell sx={{ 
+                                   fontWeight: 700, 
+                                   color: getThemeColors().item,
+                                   fontFamily: cuteFont
+                                 }}>
+                                   {musicInfo.singer_name || '未知歌手'}
+                                 </TableCell>
+                                 <TableCell sx={{ 
+                                   fontWeight: 700, 
+                                   color: getThemeColors().item,
+                                   fontFamily: cuteFont
+                                 }}>
+                                   {new Date(history.create_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                 </TableCell>
+                                <TableCell align="right">
+                                  <IconButton 
+                                    color="error" 
+                                    onClick={() => handleDeleteHistory(history.id)} 
+                                    sx={{ 
+                                      bgcolor: 'rgba(255, 118, 117, 0.05)',
+                                      '&:hover': { 
+                                        transform: 'scale(1.1) rotate(5deg)', // 俏皮的旋转
+                                        bgcolor: 'rgba(255, 118, 117, 0.1)' 
+                                      },
+                                      transition: 'all 0.2s'
+                                    }}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </React.Fragment>
                       );
                     })
                   )}
@@ -712,7 +924,10 @@ const Dashboard = () => {
         {tabValue === 2 && (
           <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
-              <Typography variant="h5">音乐流管理</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="h5" sx={{ color: getThemeColors().title }}>音乐流管理</Typography>
+                <ThemeSelector themes={themes} itemTheme={itemTheme} setItemTheme={setItemTheme} customColor={customColor} setCustomColor={setCustomColor} />
+              </Box>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField
                   size="small"
@@ -765,16 +980,38 @@ const Dashboard = () => {
                   ) : (
                     streamerList.map((streamer) => (
                       <TableRow key={streamer.id} hover sx={{ '&:hover': { bgcolor: 'rgba(255, 118, 117, 0.08) !important' } }}>
-                        <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>{streamer.id.substring(0, 8)}...</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>{streamer.original_name}</TableCell>
+                        <TableCell sx={{ 
+                          color: getThemeColors().item, 
+                          fontWeight: 700, 
+                          fontSize: '0.85rem',
+                          fontFamily: cuteFont
+                        }}>{streamer.id.substring(0, 8)}...</TableCell>
+                         <TableCell>
+                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                             <AudioIcon sx={{ color: getThemeColors().item, fontSize: 18 }} />
+                             <Typography variant="body2" sx={{ 
+                               fontWeight: 600, 
+                               color: getThemeColors().item,
+                               fontFamily: cuteFont
+                             }}>
+                               {streamer.original_name}
+                             </Typography>
+                           </Box>
+                         </TableCell>
                         <TableCell>
                           <Box component="span" sx={{ 
-                            px: 1.5, py: 0.5, borderRadius: 2, bgcolor: 'secondary.light', color: '#fff', fontSize: '0.75rem', fontWeight: 800 
+                            px: 1.5, py: 0.5, borderRadius: 2, bgcolor: 'secondary.light', color: '#fff', fontSize: '0.75rem', fontWeight: 800,
+                            fontFamily: cuteFont
                           }}>
                             {streamer.format.toUpperCase()}
                           </Box>
                         </TableCell>
-                        <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>{streamer.storage_path}</TableCell>
+                        <TableCell sx={{ 
+                           color: 'text.secondary', 
+                           fontSize: '0.85rem',
+                           fontWeight: 700,
+                           fontFamily: cuteFont
+                         }}>{streamer.storage_path}</TableCell>
                         <TableCell align="right">
                           <IconButton 
                             onClick={() => handleDeleteStreamer(streamer.id)} 
