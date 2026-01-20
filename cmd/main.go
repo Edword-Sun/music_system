@@ -36,7 +36,7 @@ func main() {
 	// Initialize handlers and register routes
 	healthHandler := router.NewHealthHandler()
 
-	musicHandler := router.NewMusicHandler(musicService)
+	musicHandler := router.NewMusicHandler(musicService, streamerService)
 	streamerHandler := router.NewStreamerHandler(streamerService)
 	musicHistoryHandler := router.NewMusicHistoryHandler(musicHistoryService)
 

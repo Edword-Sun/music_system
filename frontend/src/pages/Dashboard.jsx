@@ -178,6 +178,7 @@ const Dashboard = () => {
   const [duration, setDuration] = useState(0);
   const [currentMusic, setCurrentMusic] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [musicMap, setMusicMap] = useState({}); // 缓存音乐详情，用于 ID 到名称的映射
   
   // 颜色方案主题状态
   const [itemTheme, setItemTheme] = useState('A');
@@ -264,7 +265,14 @@ const Dashboard = () => {
     setLoading(true);
     try {
       const res = await listMusics({ page: 1, size: 100 });
-      setMusicList(res.body.data || []);
+      const data = res.body.data || [];
+      setMusicList(data);
+      // 更新音乐详情缓存
+      const newMap = { ...musicMap };
+      data.forEach(m => {
+        newMap[m.id] = m;
+      });
+      setMusicMap(newMap);
     } catch (error) {
       showSnackbar('获取音乐列表失败', 'error');
     } finally {
@@ -276,7 +284,36 @@ const Dashboard = () => {
     setLoading(true);
     try {
       const res = await listMusicHistories({ page: 1, size: 100 });
-      setHistoryList(res.body.data || []);
+      const historyData = res.body.data || [];
+      setHistoryList(historyData);
+
+      // 自动补全缺失的音乐详情
+      setMusicMap(prevMap => {
+        const missingIds = [...new Set(historyData
+          .map(h => h.music_id)
+          .filter(id => !prevMap[id]))];
+
+        if (missingIds.length > 0) {
+          // 异步获取缺失详情并再次更新 map
+          (async () => {
+            const newDetails = {};
+            await Promise.all(missingIds.map(async (id) => {
+              try {
+                const mRes = await findMusic({ id });
+                if (mRes.body) {
+                  newDetails[id] = mRes.body;
+                }
+              } catch (e) {
+                console.error(`获取音乐 ${id} 详情失败`, e);
+              }
+            }));
+            if (Object.keys(newDetails).length > 0) {
+              setMusicMap(currentMap => ({ ...currentMap, ...newDetails }));
+            }
+          })();
+        }
+        return prevMap;
+      });
     } catch (error) {
       showSnackbar('获取历史记录失败', 'error');
     } finally {
@@ -855,7 +892,7 @@ const Dashboard = () => {
                           {/* 该日期下的记录 */}
                           {items.map((history) => {
                             const isPlayingCurrent = currentMusic && currentMusic.id === history.music_id;
-                            const musicInfo = musicList.find(m => m.id === history.music_id) || {};
+                            const musicInfo = musicMap[history.music_id] || {};
                             
                             return (
                               <TableRow 

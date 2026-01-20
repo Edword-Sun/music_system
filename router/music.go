@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -13,15 +16,20 @@ import (
 	"music_system/service"
 	"music_system/tool"
 	"music_system/tool/filter"
+	"music_system/tool/music_storage_path"
 )
 
 type MusicHandler struct {
-	musicService *service.MusicService
+	musicService    *service.MusicService
+	streamerService *service.StreamerService
 }
 
-func NewMusicHandler(musicService *service.MusicService) *MusicHandler {
+func NewMusicHandler(
+	musicService *service.MusicService,
+	streamerService *service.StreamerService) *MusicHandler {
 	return &MusicHandler{
-		musicService: musicService,
+		musicService:    musicService,
+		streamerService: streamerService,
 	}
 }
 
@@ -190,6 +198,48 @@ func (h *MusicHandler) DeleteMusic(c *gin.Context) {
 			Body:    err,
 		})
 		return
+	}
+
+	err, exsitMusic := h.musicService.FindMusic(&model.Music{ID: req.ID})
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "查找存在music错误",
+			Body:    err,
+		})
+		return
+	}
+
+	// 找streamer并删掉
+	eStreamer, err := h.streamerService.FindStreamer(&filter.FindStreamer{
+		ID: exsitMusic.StreamerID,
+	})
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "通过存在music查找存在streamer错误",
+			Body:    err,
+		})
+		return
+	}
+	err = h.streamerService.DeleteStreamer(eStreamer.ID)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "删除streamer错误",
+			Body:    err,
+		})
+	}
+	// 删除本地的音乐文件，用streamer的信息去删除
+	if eStreamer.StoragePath != "" {
+		relPath := eStreamer.StoragePath
+		// 安全校验：防止路径穿越
+		if !strings.Contains(relPath, "..") && !strings.HasPrefix(relPath, "/") && !strings.HasPrefix(relPath, "\\") {
+			fullPath := filepath.Join(music_storage_path.MusicRoot, filepath.FromSlash(relPath))
+			if err := os.Remove(fullPath); err != nil && !os.IsNotExist(err) {
+				log.Printf("物理删除本地文件失败: %v, path: %s", err, fullPath)
+			}
+		}
 	}
 
 	err = h.musicService.DeleteMusic(&music)
