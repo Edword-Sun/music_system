@@ -17,3 +17,7 @@ type ListGroupReq struct {
 	StartTime int64 `json:"start_time"`
 	EndTime   int64 `json:"end_time"`
 }
+
+type DeleteGroupReq struct {
+	ID string `json:"id"`
+}

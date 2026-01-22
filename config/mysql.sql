@@ -18,6 +18,8 @@ CREATE TABLE `music_history` (
     `update_time` DATETIME NOT NULL
 );
 
+
+
 -- 2025-10-25
 CREATE TABLE `streamer` (
     `id` VARCHAR(255) PRIMARY KEY DEFAULT (UUID()),
@@ -28,3 +30,11 @@ CREATE TABLE `streamer` (
     `update_time` DATETIME NOT NULL
 );
 
+-- 2026-01-22
+CREATE TABLE `group` (
+    `id` VARCHAR(255) PRIMARY KEY DEFAULT (UUID()),
+    `name` TEXT,
+    `content` JSON,
+    `create_time` DATETIME NOT NULL,
+    `update_time` DATETIME NOT NULL
+);

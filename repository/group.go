@@ -71,7 +71,9 @@ func (repo *GroupRepository) ListGroup(condition *filter.ListGroup) (error, []*m
 	}
 
 	query = query.Order("create_time DESC")
-	query.Where("create_time BETWEEN ? AND ?", condition.StartTime, condition.EndTime)
+	if !condition.StartTime.IsZero() && !condition.EndTime.IsZero() {
+		query = query.Where("create_time BETWEEN ? AND ?", condition.StartTime, condition.EndTime)
+	}
 	query = query.Limit(condition.Size).Offset(condition.Page)
 	query = query.Count(&total)
 

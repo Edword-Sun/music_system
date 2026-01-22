@@ -3,6 +3,7 @@ package router
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	uuid "github.com/satori/go.uuid"
@@ -98,12 +99,95 @@ func (h *GroupHandler) FindGroup(c *gin.Context) {
 }
 
 func (h *GroupHandler) ListGroup(c *gin.Context) {
-	log.Println("implement")
+	var req handler.ListGroupReq
+	var condition filter.ListGroup
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Println("router: list group参数错误: ", err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body:    err,
+		})
+		return
+	}
+
+	condition.Name = req.Name
+	condition.Page = (req.Page - 1) * req.Size
+	condition.Size = req.Size
+	if req.StartTime > 0 {
+		condition.StartTime = time.Unix(req.StartTime, 0)
+	}
+	if req.EndTime > 0 {
+		condition.EndTime = time.Unix(req.EndTime, 0)
+	} else {
+		condition.EndTime = time.Now()
+	}
+
+	err, groups, total := h.groupService.ListGroup(&condition)
+	if err != nil {
+		log.Println("router: list group错误: ", err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "获取列表失败",
+			Body:    err,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "获取成功",
+		Body: gin.H{
+			"data":  groups,
+			"total": total,
+		},
+	})
 }
 func (h *GroupHandler) UpdateGroup(c *gin.Context) {
-	log.Println("implement")
+	var group model.Group
+	if err := c.ShouldBindJSON(&group); err != nil {
+		log.Println("router: update group参数错误: ", err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body:    err,
+		})
+		return
+	}
+
+	err := h.groupService.UpdateGroup(&group)
+	if err != nil {
+		log.Println("router: update group错误: ", err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "更新失败",
+			Body:    err,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "更新成功",
+		Body:    group,
+	})
 }
 
 func (h *GroupHandler) DeleteGroup(c *gin.Context) {
-	log.Println("implement")
+	var req handler.DeleteGroupReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Println("router: delete group参数错误: ", err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "参数错误",
+			Body:    err,
+		})
+		return
+	}
+
+	err := h.groupService.DeleteGroup(&model.Group{ID: req.ID})
+	if err != nil {
+		log.Println("router: delete group错误: ", err)
+		c.JSON(http.StatusOK, tool.Response{
+			Message: "删除失败",
+			Body:    err,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, tool.Response{
+		Message: "删除成功",
+		Body:    req.ID,
+	})
 }

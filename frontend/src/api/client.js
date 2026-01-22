@@ -71,3 +71,20 @@ export async function uploadAudio(file) {
 
 export const listStreamers = (params) => request('/streamer/list', { method: 'POST', json: params });
 export const deleteStreamer = (id) => request('/streamer/delete', { method: 'POST', json: { id } });
+
+// Group 相关
+export async function createGroup(group) {
+  return request('/group/add', { method: 'POST', json: group })
+}
+
+export async function updateGroup(group) {
+  return request('/group/update', { method: 'POST', json: group })
+}
+
+export async function findGroup(criteria) {
+  return request('/group/find', { method: 'POST', json: criteria });
+}
+
+export const listGroups = (params) => request('/group/list', { method: 'POST', json: params });
+
+export const deleteGroup = (id) => request('/group/delete', { method: 'DELETE', json: { id } });

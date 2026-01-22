@@ -24,6 +24,7 @@ import {
   CircularProgress,
   Select,
   MenuItem,
+  Menu,
   FormControl,
   InputLabel,
   Autocomplete,
@@ -55,12 +56,16 @@ import {
   SettingsVoice as StreamerIcon,
   ChevronLeft as ChevronLeftIcon,
   Menu as MenuIcon,
+  PlaylistAdd as PlaylistAddIcon,
+  Favorite as FavoriteIcon,
+  FavoriteBorder as FavoriteBorderIcon,
 } from '@mui/icons-material';
 import {
   listMusics,
   createMusic,
   updateMusic,
   deleteMusic,
+  findMusic,
   listMusicHistories,
   deleteMusicHistory,
   addMusicHistory,
@@ -68,6 +73,11 @@ import {
   getAudioUrl,
   listStreamers,
   deleteStreamer,
+  createGroup,
+  updateGroup,
+  findGroup,
+  listGroups,
+  deleteGroup,
 } from '../api/client';
 
 const ThemeSelector = ({ themes, itemTheme, setItemTheme, customColor, setCustomColor }) => (
@@ -159,10 +169,23 @@ const Dashboard = () => {
   const [musicList, setMusicList] = useState([]);
   const [historyList, setHistoryList] = useState([]);
   const [streamerList, setStreamerList] = useState([]);
+  const [groupList, setGroupList] = useState([]);
+  const [favoriteGroup, setFavoriteGroup] = useState(null); // 收藏合集
   const [streamerSearch, setStreamerSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openGroupDialog, setOpenGroupDialog] = useState(false);
+  const [openGroupViewDialog, setOpenGroupViewDialog] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState(null);
+  
+  // 添加到合集菜单状态
+  const [addToGroupAnchor, setAddToGroupAnchor] = useState(null);
+  const [selectedMusicToGroup, setSelectedMusicToGroup] = useState(null);
+
   const [dialogMode, setDialogMode] = useState('create');
+  const [groupDialogMode, setGroupDialogMode] = useState('create');
   const [formData, setFormData] = useState({
     id: '',
     name: '',
@@ -171,12 +194,18 @@ const Dashboard = () => {
     band: '',
     streamer_id: '',
   });
+  const [groupFormData, setGroupFormData] = useState({
+    id: '',
+    name: '',
+    music_ids: [],
+  });
   const [uploading, setUploading] = useState(false);
   const [currentAudio, setCurrentAudio] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentMusic, setCurrentMusic] = useState(null);
+  const [playQueue, setPlayQueue] = useState([]); // 当前播放队列
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [musicMap, setMusicMap] = useState({}); // 缓存音乐详情，用于 ID 到名称的映射
   
@@ -202,15 +231,27 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
+    fetchMusic();
+    fetchGroups(); // 初始加载合集列表
+  }, []);
+
+  useEffect(() => {
     if (tabValue === 0) {
       fetchMusic();
+      fetchGroups(); // 获取合集列表以便“添加到合集”功能使用
     } else if (tabValue === 1) {
       fetchHistory();
       fetchMusic(); // 获取音乐列表以便匹配名称和歌手
-    } else {
+    } else if (tabValue === 2) {
       fetchStreamers();
-    }
-  }, [tabValue]);
+    } else if (tabValue === 3) {
+        fetchGroups();
+        fetchMusic(); // 获取音乐列表以便选择
+      } else if (tabValue === 4) {
+        fetchGroups();
+        fetchMusic();
+      }
+    }, [tabValue]);
 
   useEffect(() => {
     if (currentAudio) {
@@ -333,6 +374,43 @@ const Dashboard = () => {
     }
   };
 
+  const fetchGroups = async () => {
+    setLoading(true);
+    try {
+      const res = await listGroups({ page: 1, size: 100 });
+      if (res.body && res.body.data) {
+        const allGroups = res.body.data;
+        const favorites = allGroups.find(g => g.name === '收藏');
+        
+        if (!favorites) {
+          // 如果不存在收藏合集，则创建一个
+          try {
+            await createGroup({ name: '收藏', content: '[]' });
+            // 创建成功后重新获取一次
+            const refreshRes = await listGroups({ page: 1, size: 100 });
+            if (refreshRes.body && refreshRes.body.data) {
+              const refreshedAll = refreshRes.body.data;
+              const newFavorites = refreshedAll.find(g => g.name === '收藏');
+              if (newFavorites) setFavoriteGroup(newFavorites);
+              setGroupList(refreshedAll.filter(g => g.name !== '收藏'));
+            }
+          } catch (e) {
+            console.error('自动创建收藏合集失败', e);
+          }
+        } else {
+          setFavoriteGroup(favorites);
+        }
+        
+        // 过滤掉收藏合集，不显示在普通合集列表中
+        setGroupList(allGroups.filter(g => g.name !== '收藏'));
+      }
+    } catch (error) {
+      showSnackbar('获取合集列表失败', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
   };
@@ -383,8 +461,43 @@ const Dashboard = () => {
     fetchStreamers(); // 打开弹窗时获取最新的 streamer 列表
   };
 
+  const handleOpenCreateGroup = () => {
+    setGroupDialogMode('create');
+    setGroupFormData({ id: '', name: '', music_ids: [] });
+    setOpenGroupDialog(true);
+  };
+
+  const handleOpenEditGroup = (group) => {
+    setGroupDialogMode('edit');
+    let musicIds = [];
+    try {
+      musicIds = JSON.parse(group.content || '[]');
+    } catch (e) {
+      console.error('解析合集内容失败', e);
+    }
+    setGroupFormData({
+      id: group.id,
+      name: group.name || '',
+      music_ids: musicIds,
+    });
+    setOpenGroupDialog(true);
+  };
+
+  const handleViewGroup = (group) => {
+    setSelectedGroup(group);
+    setOpenGroupViewDialog(true);
+  };
+
   const handleCloseDialog = () => {
     setOpenDialog(false);
+  };
+
+  const handleCloseGroupDialog = () => {
+    setOpenGroupDialog(false);
+  };
+
+  const handleCloseGroupViewDialog = () => {
+    setOpenGroupViewDialog(false);
   };
 
   const handleInputChange = (e) => {
@@ -468,6 +581,27 @@ const Dashboard = () => {
     }
   };
 
+  const handleGroupSubmit = async () => {
+    try {
+      const payload = {
+        ...groupFormData,
+        content: JSON.stringify(groupFormData.music_ids)
+      };
+      
+      if (groupDialogMode === 'create') {
+        await createGroup(payload);
+        showSnackbar('合集创建成功');
+      } else {
+        await updateGroup(payload);
+        showSnackbar('合集更新成功');
+      }
+      fetchGroups();
+      handleCloseGroupDialog();
+    } catch (error) {
+      showSnackbar('操作失败', 'error');
+    }
+  };
+
   const handleDeleteMusic = async (id) => {
     if (window.confirm('确定要删除这首歌吗？')) {
       try {
@@ -502,6 +636,182 @@ const Dashboard = () => {
     }
   };
 
+  const handleDeleteGroup = (group) => {
+    if (group.name === '收藏') {
+      showSnackbar('收藏合集不能删除哦，你可以点击“清空收藏”', 'warning');
+      return;
+    }
+    setGroupToDelete(group);
+    setOpenDeleteConfirm(true);
+  };
+
+  const confirmDeleteGroup = async () => {
+    if (!groupToDelete || groupToDelete.name === '收藏') return;
+    
+    try {
+      // 如果当前播放的音乐在要删除的合集中，停止播放
+      if (currentMusic) {
+        let musicIds = [];
+        try {
+          musicIds = JSON.parse(groupToDelete.content || '[]');
+        } catch (e) {
+          musicIds = [];
+        }
+        
+        if (musicIds.includes(currentMusic.id)) {
+          if (currentAudio) {
+            currentAudio.pause();
+            setCurrentAudio(null);
+          }
+          setCurrentMusic(null);
+          setPlayQueue([]);
+          showSnackbar('由于合集被删除，已停止播放相关音乐', 'info');
+        }
+      }
+
+      await deleteGroup(groupToDelete.id);
+      showSnackbar('删除成功');
+      setOpenDeleteConfirm(false);
+      setGroupToDelete(null);
+      fetchGroups();
+    } catch (error) {
+      showSnackbar('删除失败', 'error');
+    }
+  };
+
+  // 从合集中移除音乐
+  const handleRemoveFromGroup = async (group, musicId) => {
+    try {
+      let musicIds = [];
+      try {
+        musicIds = JSON.parse(group.content || '[]');
+      } catch (e) {
+        musicIds = [];
+      }
+      
+      const newMusicIds = musicIds.filter(id => id !== musicId);
+      const payload = {
+        ...group,
+        content: JSON.stringify(newMusicIds)
+      };
+      
+      await updateGroup(payload);
+      showSnackbar('已移除');
+      
+      // 更新当前选中的合集视图
+      if (selectedGroup && selectedGroup.id === group.id) {
+        setSelectedGroup({ ...group, content: payload.content });
+      }
+      
+      fetchGroups();
+    } catch (error) {
+      showSnackbar('移除失败', 'error');
+    }
+  };
+
+  const isMusicFavorite = (musicId) => {
+     if (!favoriteGroup) return false;
+     try {
+       const musicIds = JSON.parse(favoriteGroup.content || '[]');
+       return musicIds.includes(musicId);
+     } catch (e) {
+       return false;
+     }
+   };
+
+  // 收藏按钮的呼吸动画
+  const pulseKeyframes = {
+    '0%': { transform: 'scale(1)', boxShadow: '0 0 0 0 rgba(255, 45, 85, 0.4)' },
+    '70%': { transform: 'scale(1.15)', boxShadow: '0 0 0 10px rgba(255, 45, 85, 0)' },
+    '100%': { transform: 'scale(1)', boxShadow: '0 0 0 0 rgba(255, 45, 85, 0)' },
+  };
+
+  const handleToggleFavorite = async (musicId) => {
+    if (!favoriteGroup) {
+      showSnackbar('收藏功能加载中，请稍候...', 'info');
+      return;
+    }
+    
+    try {
+      let musicIds = [];
+      try {
+        musicIds = JSON.parse(favoriteGroup.content || '[]');
+      } catch (e) {
+        musicIds = [];
+      }
+      
+      const isFavorite = musicIds.includes(musicId);
+      let newMusicIds;
+      
+      if (isFavorite) {
+        newMusicIds = musicIds.filter(id => id !== musicId);
+      } else {
+        newMusicIds = [...musicIds, musicId];
+      }
+      
+      const payload = {
+        ...favoriteGroup,
+        content: JSON.stringify(newMusicIds)
+      };
+      
+      await updateGroup(payload);
+      showSnackbar(isFavorite ? '已取消收藏' : '已加入收藏');
+      
+      // 如果当前就在收藏页，刷新
+      if (tabValue === 4) {
+        fetchGroups();
+      } else {
+        // 否则只静默更新，不刷新整个列表以防闪烁
+        fetchGroups();
+      }
+    } catch (error) {
+      showSnackbar('操作失败', 'error');
+    }
+  };
+
+  // 打开添加到合集菜单
+  const handleOpenAddToGroupMenu = (event, music) => {
+    setAddToGroupAnchor(event.currentTarget);
+    setSelectedMusicToGroup(music);
+  };
+
+  // 关闭添加到合集菜单
+  const handleCloseAddToGroupMenu = () => {
+    setAddToGroupAnchor(null);
+    setSelectedMusicToGroup(null);
+  };
+
+  // 将音乐添加到选定的合集
+  const handleSelectGroupToAdd = async (group) => {
+    try {
+      let musicIds = [];
+      try {
+        musicIds = JSON.parse(group.content || '[]');
+      } catch (e) {
+        musicIds = [];
+      }
+      
+      if (musicIds.includes(selectedMusicToGroup.id)) {
+        showSnackbar('合集中已存在该音乐', 'info');
+        handleCloseAddToGroupMenu();
+        return;
+      }
+      
+      const newMusicIds = [...musicIds, selectedMusicToGroup.id];
+      const payload = {
+        ...group,
+        content: JSON.stringify(newMusicIds)
+      };
+      
+      await updateGroup(payload);
+      showSnackbar(`已添加到合集: ${group.name}`);
+      fetchGroups();
+      handleCloseAddToGroupMenu();
+    } catch (error) {
+      showSnackbar('添加失败', 'error');
+    }
+  };
+
   const handleStreamerUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -524,7 +834,7 @@ const Dashboard = () => {
     }
   };
 
-  const playMusic = async (music) => {
+  const playMusic = async (music, newQueue = null) => {
     const url = getAudioUrl(music.streamer_id);
     if (!url) {
       showSnackbar('音频文件不存在', 'error');
@@ -533,6 +843,14 @@ const Dashboard = () => {
 
     if (currentAudio) {
       currentAudio.pause();
+    }
+
+    // 如果提供了新队列，则更新播放队列
+    if (newQueue) {
+      setPlayQueue(newQueue);
+    } else if (playQueue.length === 0) {
+      // 如果当前没有队列且没有提供新队列，默认使用整个音乐列表
+      setPlayQueue(musicList);
     }
 
     const audio = new Audio(url);
@@ -552,21 +870,21 @@ const Dashboard = () => {
   };
 
   const playNext = () => {
-    if (!currentMusic || musicList.length === 0) return;
-    const currentIndex = musicList.findIndex(m => m.id === currentMusic.id);
+    if (!currentMusic || playQueue.length === 0) return;
+    const currentIndex = playQueue.findIndex(m => m.id === currentMusic.id);
     if (currentIndex === -1) return;
     
-    const nextIndex = (currentIndex + 1) % musicList.length;
-    playMusic(musicList[nextIndex]);
+    const nextIndex = (currentIndex + 1) % playQueue.length;
+    playMusic(playQueue[nextIndex]);
   };
 
   const playPrevious = () => {
-    if (!currentMusic || musicList.length === 0) return;
-    const currentIndex = musicList.findIndex(m => m.id === currentMusic.id);
+    if (!currentMusic || playQueue.length === 0) return;
+    const currentIndex = playQueue.findIndex(m => m.id === currentMusic.id);
     if (currentIndex === -1) return;
     
-    const prevIndex = (currentIndex - 1 + musicList.length) % musicList.length;
-    playMusic(musicList[prevIndex]);
+    const prevIndex = (currentIndex - 1 + playQueue.length) % playQueue.length;
+    playMusic(playQueue[prevIndex]);
   };
 
   const drawerWidth = 240;
@@ -610,6 +928,8 @@ const Dashboard = () => {
           <List sx={{ '& .MuiListItem-root': { mb: 1 } }}>
             {[
               { label: '音乐库', icon: <MusicIcon />, value: 0 },
+              { label: '我的收藏', icon: <FavoriteIcon sx={{ color: '#FF7675' }} />, value: 4 },
+              { label: '音乐合集', icon: <AudioIcon />, value: 3 },
               { label: '播放历史', icon: <HistoryIcon />, value: 1 },
               { label: '音乐流', icon: <StreamerIcon />, value: 2 },
             ].map((item) => (
@@ -765,9 +1085,54 @@ const Dashboard = () => {
                            }}>{music.band}</TableCell>
                           <TableCell align="right">
                             <Stack direction="row" spacing={1.5} justifyContent="flex-end">
+                              <Tooltip title={isMusicFavorite(music.id) ? "取消收藏" : "加入收藏"}>
+                                <IconButton 
+                                  onClick={() => handleToggleFavorite(music.id)}
+                                  sx={{ 
+                                    bgcolor: isMusicFavorite(music.id) ? '#FF2D55' : 'rgba(255, 45, 85, 0.12)',
+                                    color: isMusicFavorite(music.id) ? '#fff' : '#FF2D55',
+                                    border: isMusicFavorite(music.id) ? '2px solid #FF2D55' : '2px solid rgba(255, 45, 85, 0.6)',
+                                    animation: isMusicFavorite(music.id) ? 'pulse 2s infinite' : 'none',
+                                    '@keyframes pulse': pulseKeyframes,
+                                    width: 44,
+                                    height: 44,
+                                    '&:hover': { 
+                                      bgcolor: isMusicFavorite(music.id) ? '#FF3B30' : 'rgba(255, 45, 85, 0.2)',
+                                      color: isMusicFavorite(music.id) ? '#fff' : '#FF2D55',
+                                      border: '2px solid #FF2D55',
+                                      transform: 'scale(1.2) rotate(15deg)',
+                                      boxShadow: '0 4px 15px rgba(255, 45, 85, 0.4)',
+                                    },
+                                    transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                    '& .MuiSvgIcon-root': {
+                                      filter: isMusicFavorite(music.id) ? 'none' : 'drop-shadow(0 0 1px rgba(255,45,85,0.8))',
+                                      fontSize: '1.4rem'
+                                    }
+                                  }}
+                                >
+                                  {isMusicFavorite(music.id) ? <FavoriteIcon /> : <FavoriteBorderIcon sx={{ stroke: '#FF2D55', strokeWidth: 1.5 }} />}
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="添加到合集">
+                                <IconButton 
+                                  onClick={(e) => handleOpenAddToGroupMenu(e, music)}
+                                  sx={{ 
+                                    bgcolor: 'success.main', 
+                                    color: '#fff',
+                                    '&:hover': { 
+                                      bgcolor: 'success.dark',
+                                      transform: 'scale(1.1)' 
+                                    },
+                                    boxShadow: '0 4px 10px rgba(46, 213, 115, 0.3)',
+                                    transition: 'all 0.2s'
+                                  }}
+                                >
+                                  <PlaylistAddIcon />
+                                </IconButton>
+                              </Tooltip>
                               <Tooltip title="播放">
                                 <IconButton 
-                                  onClick={() => playMusic(music)} 
+                                  onClick={() => playMusic(music, musicList)} 
                                   sx={{ 
                                     bgcolor: 'info.main', 
                                     color: '#fff',
@@ -930,20 +1295,62 @@ const Dashboard = () => {
                                    {new Date(history.create_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                  </TableCell>
                                 <TableCell align="right">
-                                  <IconButton 
-                                    color="error" 
-                                    onClick={() => handleDeleteHistory(history.id)} 
-                                    sx={{ 
-                                      bgcolor: 'rgba(255, 118, 117, 0.05)',
-                                      '&:hover': { 
-                                        transform: 'scale(1.1) rotate(5deg)', // 俏皮的旋转
-                                        bgcolor: 'rgba(255, 118, 117, 0.1)' 
-                                      },
-                                      transition: 'all 0.2s'
-                                    }}
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
+                                  <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                    <Tooltip title={isMusicFavorite(musicInfo.id) ? "取消收藏" : "加入收藏"}>
+                                      <IconButton 
+                                        onClick={() => handleToggleFavorite(musicInfo.id)}
+                                        disabled={!musicInfo.id}
+                                        sx={{ 
+                                          color: isMusicFavorite(musicInfo.id) ? '#fff' : '#FF2D55',
+                                          bgcolor: isMusicFavorite(musicInfo.id) ? '#FF2D55' : 'rgba(255, 45, 85, 0.15)',
+                                          border: isMusicFavorite(musicInfo.id) ? '1px solid #FF2D55' : '1.5px solid rgba(255, 45, 85, 0.6)',
+                                          animation: isMusicFavorite(musicInfo.id) ? 'pulse 2s infinite' : 'none',
+                                          '@keyframes pulse': pulseKeyframes,
+                                          '&:hover': { 
+                                            transform: 'scale(1.2) rotate(10deg)',
+                                            bgcolor: isMusicFavorite(musicInfo.id) ? '#FF3B30' : 'rgba(255, 45, 85, 0.25)',
+                                            border: '1px solid #FF2D55',
+                                            boxShadow: '0 4px 12px rgba(255, 45, 85, 0.3)'
+                                          },
+                                          transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                          '& .MuiSvgIcon-root': {
+                                            filter: isMusicFavorite(musicInfo.id) ? 'none' : 'drop-shadow(0 0 1px rgba(255,45,85,0.8))',
+                                          }
+                                        }}
+                                      >
+                                        {isMusicFavorite(musicInfo.id) ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" sx={{ stroke: '#FF2D55', strokeWidth: 1.5 }} />}
+                                      </IconButton>
+                                    </Tooltip>
+                                    <IconButton 
+                                      color="primary" 
+                                      onClick={() => playMusic(musicInfo, musicList)} 
+                                      disabled={!musicInfo.id}
+                                      sx={{ 
+                                        bgcolor: 'rgba(255, 118, 117, 0.05)',
+                                        '&:hover': { 
+                                          transform: 'scale(1.1)',
+                                          bgcolor: 'rgba(255, 118, 117, 0.1)' 
+                                        },
+                                        transition: 'all 0.2s'
+                                      }}
+                                    >
+                                      {isPlayingCurrent && isPlaying ? <PauseIcon fontSize="small" /> : <PlayArrowIcon fontSize="small" />}
+                                    </IconButton>
+                                    <IconButton 
+                                      color="error" 
+                                      onClick={() => handleDeleteHistory(history.id)} 
+                                      sx={{ 
+                                        bgcolor: 'rgba(255, 118, 117, 0.05)',
+                                        '&:hover': { 
+                                          transform: 'scale(1.1) rotate(5deg)', // 俏皮的旋转
+                                          bgcolor: 'rgba(255, 118, 117, 0.1)' 
+                                        },
+                                        transition: 'all 0.2s'
+                                      }}
+                                    >
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </Stack>
                                 </TableCell>
                               </TableRow>
                             );
@@ -1074,7 +1481,357 @@ const Dashboard = () => {
             </TableContainer>
           </Box>
         )}
+
+        {tabValue === 3 && (
+          <Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="h5" sx={{ color: getThemeColors().title }}>音乐合集</Typography>
+                <ThemeSelector themes={themes} itemTheme={itemTheme} setItemTheme={setItemTheme} customColor={customColor} setCustomColor={setCustomColor} />
+              </Box>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchGroups}>
+                  刷新
+                </Button>
+                <Button variant="contained" startIcon={<AudioIcon />} onClick={handleOpenCreateGroup}>
+                  创建新合集
+                </Button>
+              </Box>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 3 }}>
+              {loading ? (
+                <Box sx={{ gridColumn: '1/-1', textAlign: 'center', py: 8 }}><CircularProgress /></Box>
+              ) : groupList.length === 0 ? (
+                <Box sx={{ gridColumn: '1/-1', textAlign: 'center', py: 8 }}>
+                  <Typography color="text.secondary">暂无合集，去创建一个吧！</Typography>
+                </Box>
+              ) : (
+                groupList.map((group) => {
+                  let musicIds = [];
+                  try {
+                    musicIds = JSON.parse(group.content || '[]');
+                  } catch (e) {
+                    console.error('解析合集内容失败', e);
+                  }
+                  
+                  return (
+                    <Paper 
+                      key={group.id} 
+                      sx={{ 
+                        p: 3, 
+                        borderRadius: 4, 
+                        cursor: 'pointer',
+                        transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                        border: '2px solid transparent',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        minHeight: 220,
+                        '&:hover': { 
+                          transform: 'translateY(-8px)',
+                          boxShadow: '0 12px 30px rgba(0,0,0,0.1)',
+                          borderColor: getThemeColors().item
+                        },
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                      onClick={() => handleViewGroup(group)}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
+                        <Box sx={{ 
+                          width: 56, 
+                          height: 56, 
+                          borderRadius: 3, 
+                          bgcolor: 'rgba(255, 118, 117, 0.1)', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center' 
+                        }}>
+                          <AudioIcon sx={{ color: getThemeColors().item, fontSize: 32 }} />
+                        </Box>
+                      </Box>
+                      
+                      <Typography variant="h6" sx={{ fontWeight: 800, mb: 1, color: '#2D3436' }}>
+                        {group.name}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 2 }}>
+                        {musicIds.length} 首音乐
+                      </Typography>
+                      
+                      <Box sx={{ mt: 'auto' }}>
+                        <Divider sx={{ mb: 2, opacity: 0.5 }} />
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button 
+                            variant="contained"
+                            size="small" 
+                            fullWidth
+                            startIcon={<PlayArrowIcon />}
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              const ids = JSON.parse(group.content || '[]');
+                              const groupQueue = ids.map(id => musicList.find(m => m.id === id)).filter(Boolean);
+                              if (groupQueue.length > 0) {
+                                playMusic(groupQueue[0], groupQueue);
+                              }
+                            }}
+                            sx={{ 
+                              bgcolor: getThemeColors().item,
+                              '&:hover': { bgcolor: getThemeColors().item, opacity: 0.9 },
+                              fontWeight: 700,
+                              borderRadius: 2
+                            }}
+                          >
+                            播放
+                          </Button>
+                          <Tooltip title="编辑">
+                            <Button 
+                              size="small" 
+                              variant="outlined"
+                              onClick={(e) => { e.stopPropagation(); handleOpenEditGroup(group); }}
+                              sx={{ 
+                                minWidth: 40,
+                                px: 1,
+                                borderRadius: 2,
+                                color: 'primary.main',
+                                borderColor: 'divider'
+                              }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip title="删除">
+                            <Button 
+                              size="small" 
+                              variant="outlined"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group); }}
+                              sx={{ 
+                                minWidth: 40,
+                                px: 1,
+                                borderRadius: 2,
+                                color: 'error.main',
+                                borderColor: 'divider',
+                                '&:hover': {
+                                  borderColor: 'error.main',
+                                  bgcolor: 'rgba(214, 48, 49, 0.05)'
+                                }
+                              }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </Button>
+                          </Tooltip>
+                        </Box>
+                      </Box>
+                    </Paper>
+                  );
+                })
+              )}
+            </Box>
+          </Box>
+        )}
+
+        {tabValue === 4 && (
+          <Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ 
+                  width: 56, 
+                  height: 56, 
+                  borderRadius: 3, 
+                  bgcolor: 'rgba(255, 118, 117, 0.15)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center' 
+                }}>
+                  <FavoriteIcon sx={{ color: '#FF7675', fontSize: 32 }} />
+                </Box>
+                <Box>
+                  <Typography variant="h5" sx={{ color: getThemeColors().title, fontWeight: 800 }}>我的收藏</Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                    {favoriteGroup ? JSON.parse(favoriteGroup.content || '[]').length : 0} 首收藏音乐
+                  </Typography>
+                </Box>
+                <ThemeSelector themes={themes} itemTheme={itemTheme} setItemTheme={setItemTheme} customColor={customColor} setCustomColor={setCustomColor} />
+              </Box>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button 
+                  variant="outlined" 
+                  color="error" 
+                  startIcon={<DeleteIcon />}
+                  onClick={async () => {
+                    if (window.confirm('确定要清空收藏夹吗？')) {
+                      try {
+                        await updateGroup({ ...favoriteGroup, content: '[]' });
+                        showSnackbar('已清空收藏夹');
+                        fetchGroups();
+                      } catch (e) {
+                        showSnackbar('操作失败', 'error');
+                      }
+                    }
+                  }}
+                  disabled={!favoriteGroup || JSON.parse(favoriteGroup.content || '[]').length === 0}
+                  sx={{ borderRadius: 3 }}
+                >
+                  清空收藏
+                </Button>
+                <Button 
+                  variant="contained" 
+                  startIcon={<PlayArrowIcon />}
+                  onClick={() => {
+                    if (!favoriteGroup) return;
+                    const ids = JSON.parse(favoriteGroup.content || '[]');
+                    const groupQueue = ids.map(id => musicList.find(m => m.id === id)).filter(Boolean);
+                    if (groupQueue.length > 0) {
+                      playMusic(groupQueue[0], groupQueue);
+                    } else {
+                      showSnackbar('收藏夹里还没有音乐哦', 'info');
+                    }
+                  }}
+                  disabled={!favoriteGroup || JSON.parse(favoriteGroup.content || '[]').length === 0}
+                  sx={{ borderRadius: 3 }}
+                >
+                  播放全部
+                </Button>
+              </Box>
+            </Box>
+
+            {!favoriteGroup || JSON.parse(favoriteGroup.content || '[]').length === 0 ? (
+              <Paper sx={{ p: 8, textAlign: 'center', borderRadius: 4, bgcolor: 'rgba(255, 255, 255, 0.5)', border: '2px dashed rgba(255, 118, 117, 0.2)' }}>
+                <FavoriteBorderIcon sx={{ fontSize: 64, color: '#FF7675', mb: 2, opacity: 0.3 }} />
+                <Typography color="text.secondary" variant="h6" sx={{ fontWeight: 700 }}>收藏夹空空如也</Typography>
+                <Typography color="text.secondary" variant="body2" sx={{ mt: 1, mb: 3 }}>
+                  在音乐库中点击心形图标，将喜欢的音乐加入这里
+                </Typography>
+                <Button variant="contained" sx={{ borderRadius: 3, px: 4 }} onClick={() => setTabValue(0)}>
+                  去探索音乐
+                </Button>
+              </Paper>
+            ) : (
+              <TableContainer component={Paper} sx={{ borderRadius: 4, overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
+                <Table>
+                  <TableHead sx={{ bgcolor: 'rgba(255, 118, 117, 0.05)' }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 800, color: '#2D3436' }}>歌名</TableCell>
+                      <TableCell sx={{ fontWeight: 800, color: '#2D3436' }}>歌手</TableCell>
+                      <TableCell sx={{ fontWeight: 800, color: '#2D3436' }}>专辑</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, color: '#2D3436' }}>操作</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {(() => {
+                      const ids = JSON.parse(favoriteGroup.content || '[]');
+                      const favoriteMusics = ids.map(id => musicList.find(m => m.id === id)).filter(Boolean);
+                      
+                      return favoriteMusics.map((music) => {
+                        const isPlayingCurrent = currentMusic && currentMusic.id === music.id;
+                        return (
+                          <TableRow 
+                            key={music.id} 
+                            hover 
+                            sx={{ 
+                              '&:hover': { bgcolor: 'rgba(255, 118, 117, 0.03) !important' },
+                              bgcolor: isPlayingCurrent ? 'rgba(255, 118, 117, 0.05)' : 'inherit'
+                            }}
+                          >
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                {isPlayingCurrent ? (
+                                  <Box sx={{ width: 32, height: 32, borderRadius: 2, bgcolor: '#FF7675', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <AudioIcon sx={{ color: '#fff', fontSize: 18 }} />
+                                  </Box>
+                                ) : (
+                                  <Box sx={{ width: 32, height: 32, borderRadius: 2, bgcolor: 'rgba(255, 118, 117, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <MusicIcon sx={{ color: '#FF7675', fontSize: 18 }} />
+                                  </Box>
+                                )}
+                                <Typography variant="body2" sx={{ fontWeight: 700, color: isPlayingCurrent ? '#FF7675' : '#2D3436' }}>
+                                  {music.name}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{music.singer_name}</TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{music.album_name}</TableCell>
+                            <TableCell align="right">
+                              <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                <Tooltip title={isPlayingCurrent && isPlaying ? "暂停" : "播放"}>
+                                  <IconButton 
+                                    size="small" 
+                                    onClick={() => playMusic(music, favoriteMusics)}
+                                    sx={{ 
+                                      bgcolor: isPlayingCurrent ? '#FF7675' : 'transparent',
+                                      color: isPlayingCurrent ? '#fff' : '#FF7675',
+                                      '&:hover': { bgcolor: isPlayingCurrent ? '#FF7675' : 'rgba(255, 118, 117, 0.1)' }
+                                    }}
+                                  >
+                                    {isPlayingCurrent && isPlaying ? <PauseIcon fontSize="small" /> : <PlayArrowIcon fontSize="small" />}
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="取消收藏">
+                                  <IconButton 
+                                    size="small" 
+                                    onClick={() => handleToggleFavorite(music.id)}
+                                    sx={{ 
+                                      color: '#fff',
+                                      bgcolor: '#FF2D55',
+                                      animation: 'pulse 2s infinite',
+                                      '@keyframes pulse': pulseKeyframes,
+                                      '&:hover': { 
+                                        bgcolor: '#FF3B30',
+                                        transform: 'scale(1.2) rotate(5deg)',
+                                        boxShadow: '0 4px 12px rgba(255, 45, 85, 0.3)'
+                                      },
+                                      transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                                    }}
+                                  >
+                                    <FavoriteIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </Stack>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      });
+                    })()}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Box>
+        )}
       </Container>
+
+      {/* 删除确认对话框 */}
+      <Dialog
+        open={openDeleteConfirm}
+        onClose={() => setOpenDeleteConfirm(false)}
+        PaperProps={{
+          sx: { borderRadius: 4, p: 1 }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>
+          确认删除合集？
+        </DialogTitle>
+        <DialogContent>
+          <Typography color="text.secondary">
+            您确定要删除合集 <Box component="span" sx={{ color: 'error.main', fontWeight: 700 }}>"{groupToDelete?.name}"</Box> 吗？此操作无法撤销。
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button 
+            onClick={() => setOpenDeleteConfirm(false)}
+            sx={{ borderRadius: 2, fontWeight: 700 }}
+          >
+            取消
+          </Button>
+          <Button 
+            onClick={confirmDeleteGroup}
+            variant="contained" 
+            color="error"
+            sx={{ borderRadius: 2, fontWeight: 700, px: 3 }}
+          >
+            确定删除
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* 新增/编辑对话框 */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
@@ -1150,6 +1907,275 @@ const Dashboard = () => {
           <Button onClick={handleCloseDialog}>取消</Button>
           <Button onClick={handleSubmit} variant="contained" disabled={!formData.streamer_id}>
             保存
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 新增/编辑合集对话框 */}
+      <Dialog open={openGroupDialog} onClose={handleCloseGroupDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>{groupDialogMode === 'create' ? '创建新合集' : '编辑合集'}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
+            <TextField
+              label="合集名称"
+              fullWidth
+              value={groupFormData.name}
+              onChange={(e) => setGroupFormData({ ...groupFormData, name: e.target.value })}
+              placeholder="输入一个好听的名字吧"
+            />
+            <Autocomplete
+              multiple
+              fullWidth
+              options={musicList}
+              getOptionLabel={(option) => `${option.name} - ${option.singer_name}`}
+              value={musicList.filter(m => groupFormData.music_ids.includes(m.id))}
+              onChange={(event, newValue) => {
+                setGroupFormData({
+                  ...groupFormData,
+                  music_ids: newValue.map(m => m.id)
+                });
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="选择音乐"
+                  placeholder="搜索并选择音乐添加到合集"
+                />
+              )}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              noOptionsText="没有找到相关的音乐"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseGroupDialog}>取消</Button>
+          <Button 
+            onClick={handleGroupSubmit} 
+            variant="contained" 
+            disabled={!groupFormData.name || groupFormData.music_ids.length === 0}
+          >
+            保存合集
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 查看合集详情对话框 */}
+      <Dialog 
+        open={openGroupViewDialog} 
+        onClose={handleCloseGroupViewDialog} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 4, minHeight: '60vh' }
+        }}
+      >
+        {selectedGroup && (
+          <>
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 0 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ 
+                  width: 48, 
+                  height: 48, 
+                  borderRadius: 2, 
+                  bgcolor: 'rgba(255, 118, 117, 0.1)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center' 
+                }}>
+                  <AudioIcon sx={{ color: getThemeColors().item }} />
+                </Box>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 800 }}>{selectedGroup.name}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    共 {JSON.parse(selectedGroup.content || '[]').length} 首音乐
+                  </Typography>
+                </Box>
+              </Box>
+              <Button 
+                variant="contained" 
+                startIcon={<PlayArrowIcon />}
+                onClick={() => {
+                  const ids = JSON.parse(selectedGroup.content || '[]');
+                  const groupQueue = ids.map(id => musicList.find(m => m.id === id)).filter(Boolean);
+                  if (groupQueue.length > 0) {
+                    playMusic(groupQueue[0], groupQueue);
+                    handleCloseGroupViewDialog();
+                  }
+                }}
+                sx={{ borderRadius: 10 }}
+              >
+                播放全部
+              </Button>
+            </DialogTitle>
+            <DialogContent>
+              <List sx={{ mt: 2 }}>
+                {(() => {
+                  const ids = JSON.parse(selectedGroup.content || '[]');
+                  const groupQueue = ids.map(id => musicList.find(m => m.id === id)).filter(Boolean);
+                  
+                  return groupQueue.map((music, index) => {
+                    const isPlayingCurrent = currentMusic?.id === music.id;
+
+                    return (
+                      <ListItem 
+                        key={music.id}
+                        disablePadding
+                        sx={{ mb: 1 }}
+                      >
+                        <ListItemButton 
+                          onClick={() => playMusic(music, groupQueue)}
+                          sx={{ 
+                            borderRadius: 3,
+                            bgcolor: isPlayingCurrent ? 'rgba(255, 118, 117, 0.05)' : 'transparent',
+                            border: isPlayingCurrent ? `1px solid ${getThemeColors().item}` : '1px solid transparent',
+                            '&:hover': { bgcolor: 'rgba(0,0,0,0.02)' }
+                          }}
+                        >
+                          <Box sx={{ mr: 2, color: 'text.secondary', width: 24, textAlign: 'center' }}>
+                            {isPlayingCurrent ? (
+                              <CircularProgress size={16} thickness={6} sx={{ color: getThemeColors().item }} />
+                            ) : (
+                              index + 1
+                            )}
+                          </Box>
+                          <ListItemText 
+                            primary={music.name}
+                            secondary={music.singer_name}
+                            primaryTypographyProps={{ fontWeight: 700, color: isPlayingCurrent ? getThemeColors().item : 'text.primary' }}
+                          />
+                          <Stack direction="row" spacing={1}>
+                            <Tooltip title={isMusicFavorite(music.id) ? "取消收藏" : "加入收藏"}>
+                              <IconButton 
+                                size="small" 
+                                onClick={(e) => { e.stopPropagation(); handleToggleFavorite(music.id); }}
+                                sx={{ 
+                                  color: isMusicFavorite(music.id) ? '#fff' : '#FF2D55',
+                                  bgcolor: isMusicFavorite(music.id) ? '#FF2D55' : 'rgba(255, 45, 85, 0.12)',
+                                  border: isMusicFavorite(music.id) ? '1px solid #FF2D55' : '1.5px solid rgba(255, 45, 85, 0.6)',
+                                  animation: isMusicFavorite(music.id) ? 'pulse 2s infinite' : 'none',
+                                  '@keyframes pulse': pulseKeyframes,
+                                  '&:hover': { 
+                                    transform: 'scale(1.25) rotate(-5deg)',
+                                    bgcolor: isMusicFavorite(music.id) ? '#FF3B30' : 'rgba(255, 45, 85, 0.25)',
+                                    color: isMusicFavorite(music.id) ? '#fff' : '#FF2D55',
+                                    border: '1px solid #FF2D55'
+                                  },
+                                  transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                  '& .MuiSvgIcon-root': {
+                                    filter: isMusicFavorite(music.id) ? 'none' : 'drop-shadow(0 0 1px rgba(255,45,85,0.8))',
+                                  }
+                                }}
+                              >
+                                {isMusicFavorite(music.id) ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" sx={{ stroke: '#FF2D55', strokeWidth: 1.5 }} />}
+                              </IconButton>
+                            </Tooltip>
+                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); playMusic(music, groupQueue); }}>
+                              {isPlayingCurrent && isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
+                            </IconButton>
+                            <Tooltip title="从合集中移除">
+                              <IconButton 
+                                size="small" 
+                                color="error" 
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  handleRemoveFromGroup(selectedGroup, music.id); 
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
+                        </ListItemButton>
+                      </ListItem>
+                    );
+                  });
+                })()}
+              </List>
+            </DialogContent>
+            <DialogActions>
+              <Button 
+                startIcon={<EditIcon />} 
+                onClick={() => {
+                  handleCloseGroupViewDialog();
+                  handleOpenEditGroup(selectedGroup);
+                }}
+              >
+                编辑
+              </Button>
+              <Button onClick={handleCloseGroupViewDialog}>关闭</Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+      
+      {/* 添加到合集的菜单 */}
+      <Menu
+        anchorEl={addToGroupAnchor}
+        open={Boolean(addToGroupAnchor)}
+        onClose={handleCloseAddToGroupMenu}
+      >
+        <Box sx={{ px: 2, py: 1 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.secondary' }}>
+            选择要添加到的合集
+          </Typography>
+        </Box>
+        <Divider />
+        {groupList.filter(g => g.name !== '收藏').length === 0 ? (
+          <MenuItem disabled>暂无其他合集</MenuItem>
+        ) : (
+          groupList.filter(g => g.name !== '收藏').map((group) => (
+            <MenuItem key={group.id} onClick={() => handleSelectGroupToAdd(group)}>
+              <ListItemIcon>
+                <MusicIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary={group.name} />
+            </MenuItem>
+          ))
+        )}
+        <Divider />
+        <MenuItem onClick={() => { handleCloseAddToGroupMenu(); handleOpenCreateGroup(); }}>
+          <ListItemIcon>
+            <PlaylistAddIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="创建新合集..." />
+        </MenuItem>
+      </Menu>
+
+      {/* 删除确认对话框 */}
+      <Dialog
+        open={openDeleteConfirm}
+        onClose={() => setOpenDeleteConfirm(false)}
+        PaperProps={{
+          sx: { borderRadius: 4, width: 320 }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, textAlign: 'center', pt: 3 }}>确认删除</DialogTitle>
+        <DialogContent sx={{ textAlign: 'center' }}>
+          <Typography variant="body1" sx={{ color: 'text.secondary', mb: 1 }}>
+            确定要删除合集 
+          </Typography>
+          <Typography variant="h6" sx={{ color: getThemeColors().item, fontWeight: 800 }}>
+            “{groupToDelete?.name}”
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 2 }}>
+            此操作不可撤销哦！
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 3, gap: 2 }}>
+          <Button 
+            onClick={() => setOpenDeleteConfirm(false)}
+            variant="outlined"
+            sx={{ borderRadius: 2, px: 3 }}
+          >
+            取消
+          </Button>
+          <Button 
+            onClick={confirmDeleteGroup}
+            variant="contained"
+            color="error"
+            sx={{ borderRadius: 2, px: 3, boxShadow: '0 4px 12px rgba(214, 48, 49, 0.3)' }}
+          >
+            确认删除
           </Button>
         </DialogActions>
       </Dialog>

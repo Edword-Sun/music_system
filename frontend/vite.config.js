@@ -13,6 +13,7 @@ export default defineConfig({
       '/uap': 'http://localhost:8080',
       '/comment': 'http://localhost:8080',
       '/streamer': 'http://localhost:8080',
+      '/group': 'http://localhost:8080',
       '/health': 'http://localhost:8080'
     }
   }
