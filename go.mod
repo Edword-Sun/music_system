@@ -3,6 +3,7 @@ module music_system
 go 1.23.4
 
 require (
+	github.com/dhowden/tag v0.0.0-20240417053706-3d75831295e8
 	github.com/gin-gonic/gin v1.11.0
 	github.com/satori/go.uuid v1.2.0
 	gorm.io/driver/mysql v1.6.0

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/dhowden/tag"
 	"github.com/gin-gonic/gin"
 
 	"music_system/model"
@@ -259,4 +260,31 @@ func (h *MusicHandler) DeleteMusic(c *gin.Context) {
 		Message: "删除成功",
 		Body:    nil,
 	})
+}
+
+func (h *MusicHandler) extractMetadata(filePath string) (*model.Music, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	// 自动识别格式并读取标签
+	m, err := tag.ReadFrom(f)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata := &model.Music{
+		Name:       m.Title(),
+		SingerName: m.Artist(),
+		Album:      m.Album(),
+
+		//Duration: m.Duration(), // 部分格式支持直接读取时长
+	}
+
+	// 甚至可以提取封面图并保存
+	// pic := m.Picture()
+
+	return metadata, nil
 }
