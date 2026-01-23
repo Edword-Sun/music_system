@@ -59,6 +59,8 @@ import {
   PlaylistAdd as PlaylistAddIcon,
   Favorite as FavoriteIcon,
   FavoriteBorder as FavoriteBorderIcon,
+  Forward10 as Forward10Icon,
+  Replay10 as Replay10Icon,
 } from '@mui/icons-material';
 import {
   listMusics,
@@ -292,6 +294,22 @@ const Dashboard = () => {
     if (currentAudio) {
       currentAudio.currentTime = newValue;
       setCurrentTime(newValue);
+    }
+  };
+
+  const seekForward = () => {
+    if (currentAudio) {
+      const newTime = Math.min(currentAudio.currentTime + 10, duration);
+      currentAudio.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+
+  const seekBackward = () => {
+    if (currentAudio) {
+      const newTime = Math.max(currentAudio.currentTime - 10, 0);
+      currentAudio.currentTime = newTime;
+      setCurrentTime(newTime);
     }
   };
 
@@ -2260,6 +2278,23 @@ const Dashboard = () => {
                 </IconButton>
 
                 <IconButton 
+                  onClick={seekBackward}
+                  sx={{ 
+                    bgcolor: 'rgba(255, 118, 117, 0.1)', 
+                    color: 'primary.main',
+                    '&:hover': { 
+                      bgcolor: 'rgba(255, 118, 117, 0.2)',
+                      transform: 'scale(1.1)',
+                    },
+                    width: 40,
+                    height: 40,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <Replay10Icon />
+                </IconButton>
+
+                <IconButton 
                   onClick={togglePlay} 
                   sx={{ 
                     backgroundColor: 'primary.main', 
@@ -2276,6 +2311,23 @@ const Dashboard = () => {
                   }}
                 >
                   {isPlaying ? <PauseIcon sx={{ fontSize: 32 }} /> : <PlayArrowIcon sx={{ fontSize: 32 }} />}
+                </IconButton>
+
+                <IconButton 
+                  onClick={seekForward}
+                  sx={{ 
+                    bgcolor: 'rgba(255, 118, 117, 0.1)', 
+                    color: 'primary.main',
+                    '&:hover': { 
+                      bgcolor: 'rgba(255, 118, 117, 0.2)',
+                      transform: 'scale(1.1)',
+                    },
+                    width: 40,
+                    height: 40,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <Forward10Icon />
                 </IconButton>
 
                 <IconButton 
