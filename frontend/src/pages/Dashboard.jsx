@@ -72,6 +72,7 @@ import {
   deleteMusicHistory,
   addMusicHistory,
   uploadAudio,
+  batchUploadAudio,
   getAudioUrl,
   listStreamers,
   deleteStreamer,
@@ -831,24 +832,41 @@ const Dashboard = () => {
   };
 
   const handleStreamerUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     setUploading(true);
     try {
-      const res = await uploadAudio(file);
-      if (res.body && res.body.id) {
-        showSnackbar('音乐流创建成功，ID: ' + res.body.id);
-        if (tabValue === 2) {
-          fetchStreamers();
+      if (files.length === 1) {
+        const res = await uploadAudio(files[0]);
+        if (res.body && res.body.id) {
+          showSnackbar('音乐流创建成功');
+          if (tabValue === 2) {
+            fetchStreamers();
+          }
+        } else {
+          showSnackbar('创建失败', 'error');
         }
       } else {
-        showSnackbar('创建失败：未返回 ID', 'error');
+        const res = await batchUploadAudio(files);
+        const successCount = res.body?.success?.length || 0;
+        const errorCount = res.body?.errors?.length || 0;
+        
+        if (successCount > 0) {
+          showSnackbar(`成功上传 ${successCount} 个文件`);
+          if (tabValue === 2) {
+            fetchStreamers();
+          }
+        }
+        if (errorCount > 0) {
+          showSnackbar(`${errorCount} 个文件上传失败`, 'warning');
+        }
       }
     } catch (error) {
-      showSnackbar('创建失败', 'error');
+      showSnackbar('上传过程中发生错误', 'error');
     } finally {
       setUploading(false);
+      e.target.value = ''; // 清空选择
     }
   };
 
@@ -1417,8 +1435,8 @@ const Dashboard = () => {
                   disabled={uploading}
                   startIcon={uploading ? <CircularProgress size={20} /> : <UploadIcon />}
                 >
-                  创建音乐流
-                  <input type="file" hidden accept="audio/*" onChange={handleStreamerUpload} />
+                  批量上传音频
+                  <input type="file" hidden accept="audio/*" multiple onChange={handleStreamerUpload} />
                 </Button>
               </Box>
             </Box>
@@ -2278,23 +2296,6 @@ const Dashboard = () => {
                 </IconButton>
 
                 <IconButton 
-                  onClick={seekBackward}
-                  sx={{ 
-                    bgcolor: 'rgba(255, 118, 117, 0.1)', 
-                    color: 'primary.main',
-                    '&:hover': { 
-                      bgcolor: 'rgba(255, 118, 117, 0.2)',
-                      transform: 'scale(1.1)',
-                    },
-                    width: 40,
-                    height: 40,
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <Replay10Icon />
-                </IconButton>
-
-                <IconButton 
                   onClick={togglePlay} 
                   sx={{ 
                     backgroundColor: 'primary.main', 
@@ -2311,23 +2312,6 @@ const Dashboard = () => {
                   }}
                 >
                   {isPlaying ? <PauseIcon sx={{ fontSize: 32 }} /> : <PlayArrowIcon sx={{ fontSize: 32 }} />}
-                </IconButton>
-
-                <IconButton 
-                  onClick={seekForward}
-                  sx={{ 
-                    bgcolor: 'rgba(255, 118, 117, 0.1)', 
-                    color: 'primary.main',
-                    '&:hover': { 
-                      bgcolor: 'rgba(255, 118, 117, 0.2)',
-                      transform: 'scale(1.1)',
-                    },
-                    width: 40,
-                    height: 40,
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <Forward10Icon />
                 </IconButton>
 
                 <IconButton 
@@ -2388,7 +2372,7 @@ const Dashboard = () => {
                 </Stack>
               </Box>
 
-              <Box sx={{ display: 'flex', alignItems: 'center', width: 140, gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', width: 200, gap: 1 }}>
                 <VolumeUpIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
                 <Slider
                   size="small"

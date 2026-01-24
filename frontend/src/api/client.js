@@ -69,6 +69,18 @@ export async function uploadAudio(file) {
   return await res.json();
 }
 
+export async function batchUploadAudio(files) {
+  const formData = new FormData();
+  for (let i = 0; i < files.length; i++) {
+    formData.append('audio', files[i]);
+  }
+  const res = await fetch(BASE + '/streamer/batch-upload', {
+    method: 'POST',
+    body: formData,
+  });
+  return await res.json();
+}
+
 export const listStreamers = (params) => request('/streamer/list', { method: 'POST', json: params });
 export const deleteStreamer = (id) => request('/streamer/delete', { method: 'POST', json: { id } });
 

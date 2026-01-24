@@ -1,9 +1,7 @@
 package router
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"io"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -33,6 +31,7 @@ func (h *StreamerHandler) Init(e *gin.Engine) {
 	{
 		g.GET("/audio", h.StreamAudio)   // 改为 GET 协议
 		g.POST("/upload", h.UploadAudio) // 新增上传接口
+		g.POST("/batch-upload", h.BatchUploadAudio)
 		g.POST("/list", h.ListStreamer)
 		g.POST("/find", h.FindStreamer)
 		g.POST("/update", h.UpdateStreamer)
@@ -110,71 +109,10 @@ func (h *StreamerHandler) UploadAudio(c *gin.Context) {
 		return
 	}
 
-	// 打开文件以读取内容
-	file, err := header.Open()
+	streamer, err := h.svc.ProcessUpload(header)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, tool.Response{
-			Message: "无法打开上传的文件",
-			Body:    err.Error(),
-		})
-		return
-	}
-	defer file.Close()
-
-	// 计算文件哈希
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		c.JSON(http.StatusInternalServerError, tool.Response{
-			Message: "哈希计算失败",
-			Body:    err.Error(),
-		})
-		return
-	}
-	hashSum := hex.EncodeToString(hash.Sum(nil))
-
-	// 获取文件后缀
-	ext := strings.ToLower(filepath.Ext(header.Filename))
-	if ext == "" {
-		ext = ".mp3" // 默认 mp3
-	}
-
-	// 生成相对存储路径 (例如: a3/a3f8c2b1.mp3)
-	relDir := hashSum[:2]
-	relPath := filepath.Join(relDir, hashSum+ext)
-	fullDir := filepath.Join(music_storage_path.MusicRoot, relDir)
-	fullPath := filepath.Join(music_storage_path.MusicRoot, relPath)
-
-	// 创建目录
-	if err := os.MkdirAll(fullDir, 0755); err != nil {
-		c.JSON(http.StatusInternalServerError, tool.Response{
-			Message: "目录创建失败",
-			Body:    err.Error(),
-		})
-		return
-	}
-
-	// 如果文件不存在则保存
-	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-		if err := c.SaveUploadedFile(header, fullPath); err != nil {
-			c.JSON(http.StatusInternalServerError, tool.Response{
-				Message: "文件保存失败",
-				Body:    err.Error(),
-			})
-			return
-		}
-	}
-
-	// 保存记录到数据库
-	streamer := &model.Streamer{
-		StoragePath:  filepath.ToSlash(relPath),
-		OriginalName: header.Filename,
-		Format:       strings.TrimPrefix(ext, "."),
-	}
-
-	err = h.svc.CreateStreamer(streamer)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, tool.Response{
-			Message: "数据库记录创建失败",
+			Message: "处理上传失败",
 			Body:    err.Error(),
 		})
 		return
@@ -183,6 +121,58 @@ func (h *StreamerHandler) UploadAudio(c *gin.Context) {
 	c.JSON(http.StatusOK, tool.Response{
 		Message: "上传成功",
 		Body:    streamer,
+	})
+}
+
+func (h *StreamerHandler) BatchUploadAudio(c *gin.Context) {
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, tool.Response{
+			Message: "解析表单失败",
+			Body:    err.Error(),
+		})
+		return
+	}
+
+	files := form.File["audio"]
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, tool.Response{
+			Message: "未发现上传文件",
+			Body:    nil,
+		})
+		return
+	}
+
+	var results []*model.Streamer
+	var errors []string
+
+	for _, file := range files {
+		streamer, err := h.svc.ProcessUpload(file)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("文件 %s 处理失败: %v", file.Filename, err))
+			continue
+		}
+		results = append(results, streamer)
+	}
+
+	status := http.StatusOK
+	message := "批量上传完成"
+	if len(errors) > 0 {
+		if len(results) == 0 {
+			status = http.StatusInternalServerError
+			message = "全部文件上传失败"
+		} else {
+			status = http.StatusMultiStatus
+			message = "部分文件上传失败"
+		}
+	}
+
+	c.JSON(status, tool.Response{
+		Message: message,
+		Body: gin.H{
+			"success": results,
+			"errors":  errors,
+		},
 	})
 }
 
