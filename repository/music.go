@@ -81,12 +81,17 @@ func (repo *MusicRepository) Delete(music *model.Music) error {
 	return nil
 }
 
-// List retrieves a list of music records with pagination and sorting.
-func (repo *MusicRepository) List(offset, limit int) ([]model.Music, int64, error) {
+// List retrieves a list of music records with pagination, sorting and filtering.
+func (repo *MusicRepository) List(offset, limit int, keyword string) ([]model.Music, int64, error) {
 	var musics []model.Music
 	var total int64
 
 	query := repo.db.Model(&model.Music{}).Order("create_time DESC")
+
+	if keyword != "" {
+		likeKeyword := "%" + keyword + "%"
+		query = query.Where("name LIKE ? OR singer_name LIKE ? OR album LIKE ?", likeKeyword, likeKeyword, likeKeyword)
+	}
 
 	// Count total records
 	if err := query.Count(&total).Error; err != nil {
@@ -99,6 +104,5 @@ func (repo *MusicRepository) List(offset, limit int) ([]model.Music, int64, erro
 		log.Println("err", err)
 		return nil, 0, errors.New("内部错误")
 	}
-
 	return musics, total, nil
 }

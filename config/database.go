@@ -25,5 +25,10 @@ func InitDB() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
+	// 自动迁移模型
+	fmt.Println("Auto migrating models...")
+	// 这里需要导入 model 包，但在 config 包中导入 model 会导致循环依赖
+	// 更好的做法是在 main.go 中迁移
+
 	fmt.Println("Database connection established")
 }

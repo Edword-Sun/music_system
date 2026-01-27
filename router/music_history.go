@@ -33,6 +33,8 @@ func (h *MusicHistoryHandler) Init(engin *gin.Engine) {
 		g.PUT("/update", h.UpdateMusicHistory)
 
 		g.POST("/delete", h.DeleteMusicHistory)
+		g.POST("/clear-all", h.DeleteAllMusicHistory)
+		g.POST("/stats", h.GetTopMusic)
 
 	}
 }
@@ -250,4 +252,28 @@ func (h *MusicHistoryHandler) DeleteMusicHistory(c *gin.Context) {
 		Body:    resp,
 	})
 	return
+}
+
+func (h *MusicHistoryHandler) DeleteAllMusicHistory(c *gin.Context) {
+	if err := h.MusicHistoryService.DeleteAllMusicHistory(); err != nil {
+		c.JSON(200, tool.Response{Message: "清空失败", Body: err})
+		return
+	}
+	c.JSON(200, tool.Response{Message: "清空成功"})
+}
+
+func (h *MusicHistoryHandler) GetTopMusic(c *gin.Context) {
+	var req struct {
+		Limit int `json:"limit"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		req.Limit = 10 // 默认 10 条
+	}
+
+	err, stats := h.MusicHistoryService.GetTopMusic(req.Limit)
+	if err != nil {
+		c.JSON(200, tool.Response{Message: "获取失败", Body: err})
+		return
+	}
+	c.JSON(200, tool.Response{Message: "获取成功", Body: stats})
 }

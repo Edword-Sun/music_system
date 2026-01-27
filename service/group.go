@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"log"
 
 	"music_system/model"
@@ -61,4 +62,73 @@ func (svc *GroupService) DeleteGroup(group *model.Group) error {
 		return err
 	}
 	return nil
+}
+
+func (svc *GroupService) AddMusicToGroup(groupID string, musicID string) error {
+	// 1. 获取合集
+	err, group := svc.groupRepository.FindGroup(&filter.FindGroup{ID: groupID})
+	if err != nil {
+		return err
+	}
+
+	// 2. 解析内容
+	var musicIDs []string
+	if group.Content != "" {
+		importJSON := []byte(group.Content)
+		if err := json.Unmarshal(importJSON, &musicIDs); err != nil {
+			log.Println("service: 解析合集内容失败: ", err)
+			musicIDs = []string{}
+		}
+	}
+
+	// 3. 检查是否已存在
+	for _, id := range musicIDs {
+		if id == musicID {
+			return nil // 已存在，直接返回
+		}
+	}
+
+	// 4. 添加并序列化
+	musicIDs = append(musicIDs, musicID)
+	newContent, err := json.Marshal(musicIDs)
+	if err != nil {
+		return err
+	}
+	group.Content = string(newContent)
+
+	// 5. 更新
+	return svc.groupRepository.UpdateGroup(group)
+}
+
+func (svc *GroupService) RemoveMusicFromGroup(groupID string, musicID string) error {
+	// 1. 获取合集
+	err, group := svc.groupRepository.FindGroup(&filter.FindGroup{ID: groupID})
+	if err != nil {
+		return err
+	}
+
+	// 2. 解析内容
+	var musicIDs []string
+	if group.Content != "" {
+		if err := json.Unmarshal([]byte(group.Content), &musicIDs); err != nil {
+			return err
+		}
+	}
+
+	// 3. 移除
+	var newList []string
+	for _, id := range musicIDs {
+		if id != musicID {
+			newList = append(newList, id)
+		}
+	}
+
+	// 4. 序列化并更新
+	newContent, err := json.Marshal(newList)
+	if err != nil {
+		return err
+	}
+	group.Content = string(newContent)
+
+	return svc.groupRepository.UpdateGroup(group)
 }

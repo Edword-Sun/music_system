@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"music_system/config"
+	"music_system/model"
 	"music_system/repository"
 	"music_system/router"
 	"music_system/service"
@@ -21,6 +22,14 @@ func main() {
 	// Initialize database connection
 	config.InitDB()
 
+	// 自动迁移数据库模型
+	config.DB.AutoMigrate(
+		&model.Music{},
+		&model.Streamer{},
+		&model.MusicHistory{},
+		&model.Group{},
+	)
+
 	r := gin.Default()
 
 	// Initialize repository
@@ -30,7 +39,7 @@ func main() {
 	groupRepository := repository.NewGroupRepository(config.DB)
 
 	// Initialize services
-	musicService := service.NewMusicService(musicRepo)
+	musicService := service.NewMusicService(musicRepo, streamerRepo)
 	streamerService := service.NewStreamerService(streamerRepo)
 	musicHistoryService := service.NewMusicHistoryService(musicHistoryRepository)
 	groupService := service.NewGroupService(groupRepository)

@@ -143,27 +143,51 @@ func (repo *MusicHistoryRepository) UpdateMusicHistory(musicHistory *model.Music
 	return nil
 }
 
-func (repo *MusicHistoryRepository) DeleteMusicHistory(deleteMusicHistory filter.DeleteMusicHistory) error {
-	if len(deleteMusicHistory.ID) == 0 {
-		log.Println("删除失败：必须提供有效的 ID")
-		return errors.New("删除失败：必须提供有效的 ID")
-	}
-
+func (repo *MusicHistoryRepository) DeleteMusicHistory(condition filter.DeleteMusicHistory) error {
 	query := repo.db.Model(&model.MusicHistory{})
-	query = query.Where("id = ?", deleteMusicHistory.ID)
+	if len(condition.ID) > 0 {
+		query = query.Where("id = ?", condition.ID)
+	}
+	if len(condition.IDs) > 0 {
+		query = query.Where("id IN (?)", condition.IDs)
+	}
+	if len(condition.MusicID) > 0 {
+		query = query.Where("music_id = ?", condition.MusicID)
+	}
 
 	err := query.Delete(&model.MusicHistory{}).Error
 	if err != nil {
-		log.Println("err: 删除music_history错误")
-		return errors.New("内部错误")
+		log.Println("err: ", err)
+		return errors.New("删除失败")
 	}
-
-	// 可选：记录日志，如果没删除任何记录
-	if query.RowsAffected == 0 {
-		// 不返回 error，但可以 log 一下
-		log.Printf("警告: 未找到 ID 为 %s 的 music_history 记录", deleteMusicHistory.ID)
-		// 如果业务需要严格模式，这里可以返回 errors.New("未找到匹配的 Comment 记录")
-	}
-
 	return nil
+}
+
+func (repo *MusicHistoryRepository) DeleteAllMusicHistory() error {
+	err := repo.db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.MusicHistory{}).Error
+	if err != nil {
+		log.Println("err: ", err)
+		return errors.New("清空失败")
+	}
+	return nil
+}
+
+type MusicStat struct {
+	MusicID string `json:"music_id"`
+	Count   int64  `json:"count"`
+}
+
+func (repo *MusicHistoryRepository) GetTopMusic(limit int) (error, []*MusicStat) {
+	var stats []*MusicStat
+	err := repo.db.Model(&model.MusicHistory{}).
+		Select("music_id, count(*) as count").
+		Group("music_id").
+		Order("count DESC").
+		Limit(limit).
+		Scan(&stats).Error
+	if err != nil {
+		log.Println("err: ", err)
+		return errors.New("获取统计失败"), nil
+	}
+	return nil, stats
 }

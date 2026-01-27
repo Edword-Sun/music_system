@@ -110,12 +110,14 @@ func CheckUpdateMusicHistoryReq(req *handler.UpdateMusicHistoryReq) (error, mode
 func CheckDeleteMusicHistoryReq(req handler.DeleteMusicHistoryReq) (error, filter.DeleteMusicHistory) {
 	var res filter.DeleteMusicHistory
 
-	if len(req.ID) == 0 {
-		return errors.New("id不能为空"), res
+	if len(req.ID) == 0 && len(req.IDs) == 0 && len(req.MusicID) == 0 {
+		return errors.New("id、ids和music_id不能同时为空"), res
 	}
 
 	res = filter.DeleteMusicHistory{
-		ID: req.ID,
+		ID:      req.ID,
+		IDs:     req.IDs,
+		MusicID: req.MusicID,
 	}
 	return nil, res
 }

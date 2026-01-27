@@ -42,6 +42,8 @@ type UpdateMusicHistoryReq struct {
 type UpdateMusicHistoryResp struct{}
 
 type DeleteMusicHistoryReq struct {
-	ID string `json:"id"`
+	ID      string   `json:"id"`
+	IDs     []string `json:"ids"`
+	MusicID string   `json:"music_id"`
 }
 type DeleteMusicHistoryResp struct{}

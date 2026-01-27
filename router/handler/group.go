@@ -21,3 +21,8 @@ type ListGroupReq struct {
 type DeleteGroupReq struct {
 	ID string `json:"id"`
 }
+
+type GroupMusicReq struct {
+	GroupID string `json:"group_id"`
+	MusicID string `json:"music_id"`
+}

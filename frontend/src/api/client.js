@@ -34,6 +34,10 @@ export const listMusics = (params) => request('/music/list', { method: 'POST', j
 
 export const deleteMusic = (id) => request('/music/delete', { method: 'DELETE', json: { id } });
 
+export async function batchSyncMusic() {
+  return request('/music/batch-sync', { method: 'POST' });
+}
+
 // 音乐历史（mh）相关
 export async function findMusicHistory(criteria) {
   return request('/mh/get', { method: 'POST', json: criteria })
@@ -51,6 +55,14 @@ export async function updateMusicHistory(data) {
 
 export async function deleteMusicHistory(id) {
   return request('/mh/delete', { method: 'POST', json: { id } })
+}
+
+export async function clearAllMusicHistory() {
+  return request('/mh/clear-all', { method: 'POST' })
+}
+
+export async function getTopMusic(limit = 10) {
+  return request('/mh/stats', { method: 'POST', json: { limit } })
 }
 
 // Streamer 相关
@@ -98,5 +110,7 @@ export async function findGroup(criteria) {
 }
 
 export const listGroups = (params) => request('/group/list', { method: 'POST', json: params });
-
 export const deleteGroup = (id) => request('/group/delete', { method: 'DELETE', json: { id } });
+
+export const addMusicToGroup = (groupId, musicId) => request('/group/add-music', { method: 'POST', json: { group_id: groupId, music_id: musicId } });
+export const removeMusicFromGroup = (groupId, musicId) => request('/group/remove-music', { method: 'POST', json: { group_id: groupId, music_id: musicId } });

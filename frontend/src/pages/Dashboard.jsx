@@ -17,28 +17,20 @@ import {
   DialogContent,
   TextField,
   DialogActions,
-  Tabs,
-  Tab,
   Snackbar,
   Alert,
   CircularProgress,
-  Select,
   MenuItem,
   Menu,
-  FormControl,
-  InputLabel,
   Autocomplete,
-  Slider,
-  Stack,
-  Drawer,
+  Tooltip,
+  Divider,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
   ListItemButton,
-  Divider,
-  Tooltip,
-  Fade,
+  Stack,
 } from '@mui/material';
 import {
   PlayArrow as PlayArrowIcon,
@@ -46,21 +38,11 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   CloudUpload as UploadIcon,
-  Refresh as RefreshIcon,
-  SkipNext as SkipNextIcon,
-  SkipPrevious as SkipPreviousIcon,
-  VolumeUp as VolumeUpIcon,
-  GraphicEq as AudioIcon,
-  LibraryMusic as MusicIcon,
-  History as HistoryIcon,
-  SettingsVoice as StreamerIcon,
-  ChevronLeft as ChevronLeftIcon,
-  Menu as MenuIcon,
   PlaylistAdd as PlaylistAddIcon,
   Favorite as FavoriteIcon,
   FavoriteBorder as FavoriteBorderIcon,
-  Forward10 as Forward10Icon,
-  Replay10 as Replay10Icon,
+  GraphicEq as AudioIcon,
+  LibraryMusic as MusicIcon,
 } from '@mui/icons-material';
 import {
   listMusics,
@@ -68,104 +50,30 @@ import {
   updateMusic,
   deleteMusic,
   findMusic,
+  batchSyncMusic,
   listMusicHistories,
   deleteMusicHistory,
-  addMusicHistory,
-  uploadAudio,
-  batchUploadAudio,
-  getAudioUrl,
   listStreamers,
   deleteStreamer,
   createGroup,
   updateGroup,
-  findGroup,
   listGroups,
   deleteGroup,
+  addMusicToGroup,
+  removeMusicFromGroup,
+  clearAllMusicHistory,
+  getTopMusic,
 } from '../api/client';
-
-const ThemeSelector = ({ themes, itemTheme, setItemTheme, customColor, setCustomColor }) => (
-  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', ml: 2 }}>
-    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>配色方案:</Typography>
-    {Object.entries(themes).filter(([key]) => key !== 'CUSTOM').map(([key, theme]) => (
-      <Tooltip 
-        key={key} 
-        title={theme.name} 
-        TransitionComponent={Fade} 
-        TransitionProps={{ timeout: 200 }}
-        arrow
-        placement="top"
-      >
-        <Box
-          onClick={() => setItemTheme(key)}
-          sx={{
-            width: 24,
-            height: 24,
-            borderRadius: '50%',
-            background: `linear-gradient(135deg, ${theme.item} 50%, ${theme.separator} 50%)`,
-            cursor: 'pointer',
-            border: itemTheme === key ? '2px solid #2D3436' : '2px solid transparent',
-            transition: 'all 0.2s',
-            '&:hover': { transform: 'scale(1.2)' }
-          }}
-        />
-      </Tooltip>
-    ))}
-    <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 16, my: 'auto' }} />
-    <Tooltip 
-      title="自定义 RGB 颜色" 
-      TransitionComponent={Fade} 
-      TransitionProps={{ timeout: 200 }}
-      arrow
-      placement="top"
-    >
-      <Box 
-        component="label"
-        htmlFor="custom-color-picker"
-        sx={{ 
-          position: 'relative', 
-          display: 'flex', 
-          alignItems: 'center',
-          cursor: 'pointer'
-        }}
-      >
-        <Box
-          sx={{
-            width: 24,
-            height: 24,
-            borderRadius: '50%',
-            background: customColor,
-            border: itemTheme === 'CUSTOM' ? '2px solid #2D3436' : '2px solid #ddd',
-            transition: 'all 0.2s',
-            '&:hover': { transform: 'scale(1.2)' },
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden'
-          }}
-        >
-          <input
-            id="custom-color-picker"
-            type="color"
-            value={customColor}
-            onInput={(e) => {
-              setCustomColor(e.target.value);
-              setItemTheme('CUSTOM');
-            }}
-            style={{
-              position: 'absolute',
-              opacity: 0,
-              width: '100%',
-              height: '100%',
-              cursor: 'pointer',
-              border: 'none',
-              padding: 0
-            }}
-          />
-        </Box>
-      </Box>
-    </Tooltip>
-  </Box>
-);
+import ThemeSelector from '../components/dashboard/ThemeSelector';
+import Sidebar from '../components/dashboard/Sidebar';
+import PlayerControlBar from '../components/dashboard/PlayerControlBar';
+import LyricsDrawer from '../components/dashboard/LyricsDrawer';
+import MusicLibraryTab from '../components/dashboard/MusicLibraryTab';
+import HistoryTab from '../components/dashboard/HistoryTab';
+import StreamerTab from '../components/dashboard/StreamerTab';
+import GroupTab from '../components/dashboard/GroupTab';
+import FavoriteTab from '../components/dashboard/FavoriteTab';
+import StatsTab from '../components/dashboard/StatsTab';
 
 const Dashboard = () => {
   const [tabValue, setTabValue] = useState(0);
@@ -174,12 +82,15 @@ const Dashboard = () => {
   const [streamerList, setStreamerList] = useState([]);
   const [groupList, setGroupList] = useState([]);
   const [favoriteGroup, setFavoriteGroup] = useState(null); // 收藏合集
+  const [topMusic, setTopMusic] = useState([]); // 播放统计
   const [streamerSearch, setStreamerSearch] = useState('');
+  const [musicSearch, setMusicSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [openGroupDialog, setOpenGroupDialog] = useState(false);
   const [openGroupViewDialog, setOpenGroupViewDialog] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [groupSearch, setGroupSearch] = useState(''); // 歌单内搜索
   const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState(null);
   
@@ -211,6 +122,12 @@ const Dashboard = () => {
   const [playQueue, setPlayQueue] = useState([]); // 当前播放队列
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [musicMap, setMusicMap] = useState({}); // 缓存音乐详情，用于 ID 到名称的映射
+  
+  // 歌词相关状态
+  const [lyrics, setLyrics] = useState('');
+  const [parsedLyrics, setParsedLyrics] = useState([]);
+  const [currentLyricIndex, setCurrentLyricIndex] = useState(-1);
+  const [lyricsOpen, setLyricsOpen] = useState(false);
   
   // 颜色方案主题状态
   const [itemTheme, setItemTheme] = useState('A');
@@ -253,12 +170,53 @@ const Dashboard = () => {
       } else if (tabValue === 4) {
         fetchGroups();
         fetchMusic();
+      } else if (tabValue === 5) {
+        fetchStats();
+        fetchMusic();
       }
     }, [tabValue]);
 
+  const parseLRC = (lrcContent) => {
+    if (!lrcContent) return [];
+    const lines = lrcContent.split('\n');
+    const result = [];
+    const timeReg = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/g;
+
+    lines.forEach(line => {
+      const content = line.replace(timeReg, '').trim();
+      if (!content) return;
+
+      let match;
+      timeReg.lastIndex = 0;
+      while ((match = timeReg.exec(line)) !== null) {
+        const mins = parseInt(match[1]);
+        const secs = parseInt(match[2]);
+        const ms = parseInt(match[3]);
+        const time = mins * 60 + secs + ms / (match[3].length === 3 ? 1000 : 100);
+        result.push({ time, content });
+      }
+    });
+
+    return result.sort((a, b) => a.time - b.time);
+  };
+
   useEffect(() => {
     if (currentAudio) {
-      const updateTime = () => setCurrentTime(currentAudio.currentTime);
+      const updateTime = () => {
+        const time = currentAudio.currentTime;
+        setCurrentTime(time);
+        
+        // 更新当前歌词索引
+        if (parsedLyrics.length > 0) {
+          const index = parsedLyrics.findIndex((lyric, i) => {
+            const nextLyric = parsedLyrics[i + 1];
+            return time >= lyric.time && (!nextLyric || time < nextLyric.time);
+          });
+          if (index !== -1 && index !== currentLyricIndex) {
+            setCurrentLyricIndex(index);
+          }
+        }
+      };
       const updateDuration = () => setDuration(currentAudio.duration);
       const handleEnded = () => {
         setIsPlaying(false);
@@ -280,6 +238,15 @@ const Dashboard = () => {
       };
     }
   }, [currentAudio]);
+
+  useEffect(() => {
+    if (currentLyricIndex !== -1) {
+      const activeElement = document.getElementById(`lyric-${currentLyricIndex}`);
+      if (activeElement) {
+        activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [currentLyricIndex]);
 
   const togglePlay = () => {
     if (currentAudio) {
@@ -321,10 +288,10 @@ const Dashboard = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const fetchMusic = async () => {
+  const fetchMusic = async (keyword = musicSearch) => {
     setLoading(true);
     try {
-      const res = await listMusics({ page: 1, size: 100 });
+      const res = await listMusics({ page: 1, size: 100, keyword });
       const data = res.body.data || [];
       setMusicList(data);
       // 更新音乐详情缓存
@@ -339,6 +306,15 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (tabValue === 0) {
+        fetchMusic();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [musicSearch]);
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -390,6 +366,29 @@ const Dashboard = () => {
       showSnackbar('获取音乐流列表失败', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    setLoading(true);
+    try {
+      const res = await getTopMusic(20);
+      setTopMusic(res.body || []);
+    } catch (error) {
+      showSnackbar('获取统计数据失败', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearHistory = async () => {
+    if (!window.confirm('确定要清空所有播放历史吗？')) return;
+    try {
+      await clearAllMusicHistory();
+      showSnackbar('历史记录已清空');
+      fetchHistory();
+    } catch (error) {
+      showSnackbar('清空失败', 'error');
     }
   };
 
@@ -455,10 +454,6 @@ const Dashboard = () => {
     return getThemeColors().separator;
   };
 
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
-  };
-
   const handleOpenCreate = () => {
     setDialogMode('create');
     setFormData({ id: '', name: '', singer_name: '', album: '', band: '', streamer_id: '' });
@@ -517,6 +512,7 @@ const Dashboard = () => {
 
   const handleCloseGroupViewDialog = () => {
     setOpenGroupViewDialog(false);
+    setGroupSearch('');
   };
 
   const handleInputChange = (e) => {
@@ -560,6 +556,19 @@ const Dashboard = () => {
       }
       return updated;
     });
+  };
+
+  const handleSyncMusic = async () => {
+    setLoading(true);
+    try {
+      const res = await batchSyncMusic();
+      showSnackbar(res.message || '同步完成');
+      fetchMusic();
+    } catch (error) {
+      showSnackbar('同步失败', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFileUpload = async (e) => {
@@ -701,25 +710,13 @@ const Dashboard = () => {
   // 从合集中移除音乐
   const handleRemoveFromGroup = async (group, musicId) => {
     try {
-      let musicIds = [];
-      try {
-        musicIds = JSON.parse(group.content || '[]');
-      } catch (e) {
-        musicIds = [];
-      }
-      
-      const newMusicIds = musicIds.filter(id => id !== musicId);
-      const payload = {
-        ...group,
-        content: JSON.stringify(newMusicIds)
-      };
-      
-      await updateGroup(payload);
+      await removeMusicFromGroup(group.id, musicId);
       showSnackbar('已移除');
       
       // 更新当前选中的合集视图
       if (selectedGroup && selectedGroup.id === group.id) {
-        setSelectedGroup({ ...group, content: payload.content });
+        const musicIds = JSON.parse(group.content || '[]').filter(id => id !== musicId);
+        setSelectedGroup({ ...group, content: JSON.stringify(musicIds) });
       }
       
       fetchGroups();
@@ -752,37 +749,18 @@ const Dashboard = () => {
     }
     
     try {
-      let musicIds = [];
-      try {
-        musicIds = JSON.parse(favoriteGroup.content || '[]');
-      } catch (e) {
-        musicIds = [];
-      }
-      
-      const isFavorite = musicIds.includes(musicId);
-      let newMusicIds;
+      const isFavorite = isMusicFavorite(musicId);
       
       if (isFavorite) {
-        newMusicIds = musicIds.filter(id => id !== musicId);
+        await removeMusicFromGroup(favoriteGroup.id, musicId);
+        showSnackbar('已取消收藏');
       } else {
-        newMusicIds = [...musicIds, musicId];
+        await addMusicToGroup(favoriteGroup.id, musicId);
+        showSnackbar('已加入收藏');
       }
       
-      const payload = {
-        ...favoriteGroup,
-        content: JSON.stringify(newMusicIds)
-      };
-      
-      await updateGroup(payload);
-      showSnackbar(isFavorite ? '已取消收藏' : '已加入收藏');
-      
-      // 如果当前就在收藏页，刷新
-      if (tabValue === 4) {
-        fetchGroups();
-      } else {
-        // 否则只静默更新，不刷新整个列表以防闪烁
-        fetchGroups();
-      }
+      // 刷新列表以更新状态
+      fetchGroups();
     } catch (error) {
       showSnackbar('操作失败', 'error');
     }
@@ -803,26 +781,7 @@ const Dashboard = () => {
   // 将音乐添加到选定的合集
   const handleSelectGroupToAdd = async (group) => {
     try {
-      let musicIds = [];
-      try {
-        musicIds = JSON.parse(group.content || '[]');
-      } catch (e) {
-        musicIds = [];
-      }
-      
-      if (musicIds.includes(selectedMusicToGroup.id)) {
-        showSnackbar('合集中已存在该音乐', 'info');
-        handleCloseAddToGroupMenu();
-        return;
-      }
-      
-      const newMusicIds = [...musicIds, selectedMusicToGroup.id];
-      const payload = {
-        ...group,
-        content: JSON.stringify(newMusicIds)
-      };
-      
-      await updateGroup(payload);
+      await addMusicToGroup(group.id, selectedMusicToGroup.id);
       showSnackbar(`已添加到合集: ${group.name}`);
       fetchGroups();
       handleCloseAddToGroupMenu();
@@ -897,6 +856,12 @@ const Dashboard = () => {
     setCurrentTime(0);
     setDuration(0);
 
+    // 设置并解析歌词
+    const lrc = music.lyrics || '';
+    setLyrics(lrc);
+    setParsedLyrics(parseLRC(lrc));
+    setCurrentLyricIndex(-1);
+
     // 记录播放历史
     try {
       await addMusicHistory({ music_id: music.id });
@@ -923,104 +888,58 @@ const Dashboard = () => {
     playMusic(playQueue[prevIndex]);
   };
 
+  const [draggedIndex, setDraggedIndex] = useState(null);
+
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    // 设置拖拽时的预览样式（可选）
+    e.currentTarget.style.opacity = '0.4';
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = async (e, targetIndex) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) return;
+
+    const ids = JSON.parse(selectedGroup.content || '[]');
+    const newIds = [...ids];
+    const [removed] = newIds.splice(draggedIndex, 1);
+    newIds.splice(targetIndex, 0, removed);
+
+    const updatedContent = JSON.stringify(newIds);
+    try {
+      await updateGroup({ ...selectedGroup, content: updatedContent });
+      setSelectedGroup({ ...selectedGroup, content: updatedContent });
+      fetchGroups();
+      showSnackbar('顺序已更新');
+    } catch (error) {
+      showSnackbar('更新顺序失败', 'error');
+    }
+  };
+
+  const handleDragEnd = (e) => {
+    e.currentTarget.style.opacity = '1';
+    setDraggedIndex(null);
+  };
+
   const drawerWidth = 240;
   const collapsedDrawerWidth = 64;
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: sidebarOpen ? drawerWidth : collapsedDrawerWidth,
-          transition: 'width 0.3s',
-          '& .MuiDrawer-paper': {
-            width: sidebarOpen ? drawerWidth : collapsedDrawerWidth,
-            transition: 'width 0.3s',
-            boxSizing: 'border-box',
-            overflowX: 'hidden',
-            borderRight: 'none',
-            backgroundColor: '#fff',
-            boxShadow: '4px 0 24px rgba(0,0,0,0.02)',
-          },
-        }}
-      >
-        <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: sidebarOpen ? 'space-between' : 'center' }}>
-          {sidebarOpen && (
-            <Typography variant="h6" sx={{ 
-              fontWeight: 800, 
-              background: 'linear-gradient(45deg, #FF7675 30%, #FAB1A0 90%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              letterSpacing: 1
-            }}>
-              MUSIC POP
-            </Typography>
-          )}
-          <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ backgroundColor: '#F7F9FC' }}>
-            {sidebarOpen ? <ChevronLeftIcon /> : <MenuIcon />}
-          </IconButton>
-        </Box>
-        <Box sx={{ px: 2, mt: 2 }}>
-          <List sx={{ '& .MuiListItem-root': { mb: 1 } }}>
-            {[
-              { label: '音乐库', icon: <MusicIcon />, value: 0 },
-              { label: '我的收藏', icon: <FavoriteIcon sx={{ color: '#FF7675' }} />, value: 4 },
-              { label: '音乐合集', icon: <AudioIcon />, value: 3 },
-              { label: '播放历史', icon: <HistoryIcon />, value: 1 },
-              { label: '音乐流', icon: <StreamerIcon />, value: 2 },
-            ].map((item) => (
-              <ListItem key={item.value} disablePadding sx={{ display: 'block' }}>
-                <Tooltip title={!sidebarOpen ? item.label : ''} placement="right">
-                  <ListItemButton
-                    selected={tabValue === item.value}
-                    onClick={() => setTabValue(item.value)}
-                    sx={{
-                      minHeight: 48,
-                      justifyContent: sidebarOpen ? 'initial' : 'center',
-                      px: 2.5,
-                      borderRadius: 3,
-                      mx: 1,
-                      '&.Mui-selected': {
-                        backgroundColor: 'primary.main',
-                        color: '#fff',
-                        '&:hover': {
-                          backgroundColor: 'primary.dark',
-                        },
-                        '& .MuiListItemIcon-root': {
-                          color: '#fff',
-                        },
-                      },
-                      '&:hover:not(.Mui-selected)': {
-                        backgroundColor: 'rgba(255, 118, 117, 0.12)',
-                      }
-                    }}
-                  >
-                    <ListItemIcon
-                      sx={{
-                        minWidth: 0,
-                        mr: sidebarOpen ? 2 : 'auto',
-                        justifyContent: 'center',
-                        color: tabValue === item.value ? 'inherit' : 'text.secondary',
-                      }}
-                    >
-                      {item.icon}
-                    </ListItemIcon>
-                    {sidebarOpen && (
-                      <ListItemText 
-                        primary={item.label} 
-                        primaryTypographyProps={{ 
-                          fontWeight: tabValue === item.value ? 800 : 600,
-                          fontSize: '0.95rem'
-                        }} 
-                      />
-                    )}
-                  </ListItemButton>
-                </Tooltip>
-              </ListItem>
-            ))}
-          </List>
-        </Box>
-      </Drawer>
+      <Sidebar 
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        tabValue={tabValue}
+        setTabValue={setTabValue}
+        drawerWidth={drawerWidth}
+        collapsedDrawerWidth={collapsedDrawerWidth}
+      />
 
       <Container 
         maxWidth="lg" 
@@ -1034,840 +953,136 @@ const Dashboard = () => {
       >
         {/* 内容区域开始 */}
         {tabValue === 0 && (
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography variant="h5" sx={{ color: getThemeColors().title }}>音乐管理</Typography>
-                <ThemeSelector themes={themes} itemTheme={itemTheme} setItemTheme={setItemTheme} customColor={customColor} setCustomColor={setCustomColor} />
-              </Box>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchMusic}>
-                  刷新
-                </Button>
-                <Button variant="contained" startIcon={<UploadIcon />} onClick={handleOpenCreate}>
-                  新增音乐
-                </Button>
-              </Box>
-            </Box>
-
-            <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>歌名</TableCell>
-                    <TableCell>歌手</TableCell>
-                    <TableCell>专辑</TableCell>
-                    <TableCell>乐队</TableCell>
-                    <TableCell align="right">操作</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {loading ? (
-                    <TableRow><TableCell colSpan={5} align="center" sx={{ py: 8 }}><CircularProgress /></TableCell></TableRow>
-                  ) : musicList.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} align="center" sx={{ py: 8 }}>暂无音乐</TableCell></TableRow>
-                  ) : (
-                    musicList.map((music) => {
-                      const isPlayingCurrent = currentMusic && currentMusic.id === music.id;
-                      return (
-                        <TableRow 
-                          key={music.id}
-                          hover
-                          sx={{ 
-                            bgcolor: isPlayingCurrent ? 'rgba(255, 118, 117, 0.06)' : 'inherit',
-                            '&:hover': { bgcolor: 'rgba(255, 118, 117, 0.1) !important' }
-                          }}
-                        >
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                              {isPlayingCurrent ? (
-                                <Box sx={{ 
-                                  width: 32, height: 32, borderRadius: 2, bgcolor: 'primary.main', 
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center' 
-                                }}>
-                                  <AudioIcon sx={{ color: '#fff', fontSize: 18 }} />
-                                </Box>
-                              ) : (
-                                <Box sx={{ 
-                                  width: 32, height: 32, borderRadius: 2, bgcolor: 'background.default', 
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center' 
-                                }}>
-                                  <MusicIcon sx={{ color: getThemeColors().item, fontSize: 18 }} />
-                                </Box>
-                              )}
-                              <Typography variant="body2" sx={{ 
-                                fontWeight: isPlayingCurrent ? 800 : 600, 
-                                color: getThemeColors().item,
-                                fontFamily: cuteFont
-                              }}>
-                                {music.name}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell sx={{ 
-                             fontWeight: 700, 
-                             color: getThemeColors().item,
-                             fontFamily: cuteFont
-                           }}>{music.singer_name}</TableCell>
-                           <TableCell sx={{ 
-                             fontWeight: 700,
-                             color: 'text.secondary',
-                             fontFamily: cuteFont
-                           }}>{music.album}</TableCell>
-                           <TableCell sx={{ 
-                             fontWeight: 700,
-                             color: 'text.secondary',
-                             fontFamily: cuteFont
-                           }}>{music.band}</TableCell>
-                          <TableCell align="right">
-                            <Stack direction="row" spacing={1.5} justifyContent="flex-end">
-                              <Tooltip title={isMusicFavorite(music.id) ? "取消收藏" : "加入收藏"}>
-                                <IconButton 
-                                  onClick={() => handleToggleFavorite(music.id)}
-                                  sx={{ 
-                                    bgcolor: isMusicFavorite(music.id) ? '#FF2D55' : 'rgba(255, 45, 85, 0.12)',
-                                    color: isMusicFavorite(music.id) ? '#fff' : '#FF2D55',
-                                    border: isMusicFavorite(music.id) ? '2px solid #FF2D55' : '2px solid rgba(255, 45, 85, 0.6)',
-                                    animation: isMusicFavorite(music.id) ? 'pulse 2s infinite' : 'none',
-                                    '@keyframes pulse': pulseKeyframes,
-                                    width: 44,
-                                    height: 44,
-                                    '&:hover': { 
-                                      bgcolor: isMusicFavorite(music.id) ? '#FF3B30' : 'rgba(255, 45, 85, 0.2)',
-                                      color: isMusicFavorite(music.id) ? '#fff' : '#FF2D55',
-                                      border: '2px solid #FF2D55',
-                                      transform: 'scale(1.2) rotate(15deg)',
-                                      boxShadow: '0 4px 15px rgba(255, 45, 85, 0.4)',
-                                    },
-                                    transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                                    '& .MuiSvgIcon-root': {
-                                      filter: isMusicFavorite(music.id) ? 'none' : 'drop-shadow(0 0 1px rgba(255,45,85,0.8))',
-                                      fontSize: '1.4rem'
-                                    }
-                                  }}
-                                >
-                                  {isMusicFavorite(music.id) ? <FavoriteIcon /> : <FavoriteBorderIcon sx={{ stroke: '#FF2D55', strokeWidth: 1.5 }} />}
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="添加到合集">
-                                <IconButton 
-                                  onClick={(e) => handleOpenAddToGroupMenu(e, music)}
-                                  sx={{ 
-                                    bgcolor: 'success.main', 
-                                    color: '#fff',
-                                    '&:hover': { 
-                                      bgcolor: 'success.dark',
-                                      transform: 'scale(1.1)' 
-                                    },
-                                    boxShadow: '0 4px 10px rgba(46, 213, 115, 0.3)',
-                                    transition: 'all 0.2s'
-                                  }}
-                                >
-                                  <PlaylistAddIcon />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="播放">
-                                <IconButton 
-                                  onClick={() => playMusic(music, musicList)} 
-                                  sx={{ 
-                                    bgcolor: 'info.main', 
-                                    color: '#fff',
-                                    '&:hover': { 
-                                      bgcolor: 'info.dark',
-                                      transform: 'scale(1.1)' 
-                                    },
-                                    boxShadow: '0 4px 10px rgba(84, 160, 255, 0.3)',
-                                    transition: 'all 0.2s'
-                                  }}
-                                >
-                                  <PlayArrowIcon />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="编辑">
-                                <IconButton 
-                                  onClick={() => handleOpenEdit(music)} 
-                                  sx={{ 
-                                    bgcolor: 'warning.main', 
-                                    color: '#fff',
-                                    '&:hover': { 
-                                      bgcolor: 'warning.dark',
-                                      transform: 'scale(1.1)' 
-                                    },
-                                    boxShadow: '0 4px 10px rgba(255, 159, 67, 0.3)',
-                                    transition: 'all 0.2s'
-                                  }}
-                                >
-                                  <EditIcon />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="删除">
-                                <IconButton 
-                                  onClick={() => handleDeleteMusic(music.id)} 
-                                  sx={{ 
-                                    bgcolor: 'error.main', 
-                                    color: '#fff',
-                                    '&:hover': { 
-                                      bgcolor: 'error.dark',
-                                      transform: 'scale(1.1)' 
-                                    },
-                                    boxShadow: '0 4px 10px rgba(255, 107, 107, 0.3)',
-                                    transition: 'all 0.2s'
-                                  }}
-                                >
-                                  <DeleteIcon />
-                                </IconButton>
-                              </Tooltip>
-                            </Stack>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
+          <MusicLibraryTab
+            loading={loading}
+            musicList={musicList}
+            musicSearch={musicSearch}
+            setMusicSearch={setMusicSearch}
+            fetchMusic={fetchMusic}
+            handleSyncMusic={handleSyncMusic}
+            handleOpenCreate={handleOpenCreate}
+            currentMusic={currentMusic}
+            getThemeColors={getThemeColors}
+            cuteFont={cuteFont}
+            isMusicFavorite={isMusicFavorite}
+            handleToggleFavorite={handleToggleFavorite}
+            handleOpenAddToGroupMenu={handleOpenAddToGroupMenu}
+            playMusic={playMusic}
+            handleOpenEdit={handleOpenEdit}
+            handleDeleteMusic={handleDeleteMusic}
+            pulseKeyframes={pulseKeyframes}
+            themes={themes}
+            itemTheme={itemTheme}
+            setItemTheme={setItemTheme}
+            customColor={customColor}
+            setCustomColor={setCustomColor}
+          />
         )}
 
         {tabValue === 1 && (
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography variant="h5" sx={{ color: getThemeColors().title }}>最近播放</Typography>
-                <ThemeSelector themes={themes} itemTheme={itemTheme} setItemTheme={setItemTheme} customColor={customColor} setCustomColor={setCustomColor} />
-              </Box>
-              <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchHistory}>
-                刷新
-              </Button>
-            </Box>
-
-            <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>音乐名称</TableCell>
-                    <TableCell>作者名</TableCell>
-                    <TableCell>播放时间</TableCell>
-                    <TableCell align="right">操作</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {loading ? (
-                    <TableRow><TableCell colSpan={4} align="center" sx={{ py: 8 }}><CircularProgress /></TableCell></TableRow>
-                  ) : historyList.length === 0 ? (
-                    <TableRow><TableCell colSpan={4} align="center" sx={{ py: 8 }}>暂无历史记录</TableCell></TableRow>
-                  ) : (
-                    groupedHistory.map(([date, items]) => {
-                      const headerColor = getDateColor(date);
-                      return (
-                        <React.Fragment key={date}>
-                          {/* 日期分割标题 */}
-                          <TableRow sx={{ '&:hover': { bgcolor: 'transparent !important' } }}>
-                            <TableCell colSpan={4} sx={{ 
-                              bgcolor: 'transparent', 
-                              py: 2, 
-                              borderBottom: 'none',
-                              pt: 5 // 进一步增加顶部间距，强化呼吸感
-                            }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Typography variant="h6" sx={{ 
-                                  fontWeight: 900, // 加重字重
-                                  color: headerColor, // 使用动态颜色
-                                  fontSize: '1.5rem', // 字体更大一些，更有冲击力
-                                  fontFamily: '"Quicksand", sans-serif',
-                                  textShadow: `2px 2px 0px ${headerColor}22`, // 添加轻微的阴影效果
-                                  letterSpacing: 1
-                                }}>
-                                  {formatDateHeader(date)}
-                                </Typography>
-                                <Box sx={{ 
-                                  flexGrow: 1, 
-                                  height: '3px', 
-                                  background: `linear-gradient(to right, ${headerColor}44, ${headerColor}05)`, 
-                                  borderRadius: 2 
-                                }} />
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                          
-                          {/* 该日期下的记录 */}
-                          {items.map((history) => {
-                            const isPlayingCurrent = currentMusic && currentMusic.id === history.music_id;
-                            const musicInfo = musicMap[history.music_id] || {};
-                            
-                            return (
-                              <TableRow 
-                                key={history.id}
-                                hover
-                                sx={{ 
-                                  bgcolor: isPlayingCurrent ? 'rgba(255, 118, 117, 0.06)' : 'inherit',
-                                  '&:hover': { bgcolor: 'rgba(255, 118, 117, 0.1) !important' }
-                                }}
-                              >
-                                <TableCell>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <HistoryIcon sx={{ color: getThemeColors().item, fontSize: 18, opacity: 0.7 }} />
-                                    <Typography variant="body2" sx={{ 
-                                      fontWeight: 600, 
-                                      color: getThemeColors().item,
-                                      fontFamily: cuteFont
-                                    }}>
-                                      {musicInfo.name || history.music_id}
-                                    </Typography>
-                                  </Box>
-                                </TableCell>
-                                <TableCell sx={{ 
-                                   fontWeight: 700, 
-                                   color: getThemeColors().item,
-                                   fontFamily: cuteFont
-                                 }}>
-                                   {musicInfo.singer_name || '未知歌手'}
-                                 </TableCell>
-                                 <TableCell sx={{ 
-                                   fontWeight: 700, 
-                                   color: getThemeColors().item,
-                                   fontFamily: cuteFont
-                                 }}>
-                                   {new Date(history.create_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                 </TableCell>
-                                <TableCell align="right">
-                                  <Stack direction="row" spacing={1} justifyContent="flex-end">
-                                    <Tooltip title={isMusicFavorite(musicInfo.id) ? "取消收藏" : "加入收藏"}>
-                                      <IconButton 
-                                        onClick={() => handleToggleFavorite(musicInfo.id)}
-                                        disabled={!musicInfo.id}
-                                        sx={{ 
-                                          color: isMusicFavorite(musicInfo.id) ? '#fff' : '#FF2D55',
-                                          bgcolor: isMusicFavorite(musicInfo.id) ? '#FF2D55' : 'rgba(255, 45, 85, 0.15)',
-                                          border: isMusicFavorite(musicInfo.id) ? '1px solid #FF2D55' : '1.5px solid rgba(255, 45, 85, 0.6)',
-                                          animation: isMusicFavorite(musicInfo.id) ? 'pulse 2s infinite' : 'none',
-                                          '@keyframes pulse': pulseKeyframes,
-                                          '&:hover': { 
-                                            transform: 'scale(1.2) rotate(10deg)',
-                                            bgcolor: isMusicFavorite(musicInfo.id) ? '#FF3B30' : 'rgba(255, 45, 85, 0.25)',
-                                            border: '1px solid #FF2D55',
-                                            boxShadow: '0 4px 12px rgba(255, 45, 85, 0.3)'
-                                          },
-                                          transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                                          '& .MuiSvgIcon-root': {
-                                            filter: isMusicFavorite(musicInfo.id) ? 'none' : 'drop-shadow(0 0 1px rgba(255,45,85,0.8))',
-                                          }
-                                        }}
-                                      >
-                                        {isMusicFavorite(musicInfo.id) ? <FavoriteIcon fontSize="small" /> : <FavoriteBorderIcon fontSize="small" sx={{ stroke: '#FF2D55', strokeWidth: 1.5 }} />}
-                                      </IconButton>
-                                    </Tooltip>
-                                    <IconButton 
-                                      color="primary" 
-                                      onClick={() => playMusic(musicInfo, musicList)} 
-                                      disabled={!musicInfo.id}
-                                      sx={{ 
-                                        bgcolor: 'rgba(255, 118, 117, 0.05)',
-                                        '&:hover': { 
-                                          transform: 'scale(1.1)',
-                                          bgcolor: 'rgba(255, 118, 117, 0.1)' 
-                                        },
-                                        transition: 'all 0.2s'
-                                      }}
-                                    >
-                                      {isPlayingCurrent && isPlaying ? <PauseIcon fontSize="small" /> : <PlayArrowIcon fontSize="small" />}
-                                    </IconButton>
-                                    <IconButton 
-                                      color="error" 
-                                      onClick={() => handleDeleteHistory(history.id)} 
-                                      sx={{ 
-                                        bgcolor: 'rgba(255, 118, 117, 0.05)',
-                                        '&:hover': { 
-                                          transform: 'scale(1.1) rotate(5deg)', // 俏皮的旋转
-                                          bgcolor: 'rgba(255, 118, 117, 0.1)' 
-                                        },
-                                        transition: 'all 0.2s'
-                                      }}
-                                    >
-                                      <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                  </Stack>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </React.Fragment>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
+          <HistoryTab
+            loading={loading}
+            historyList={historyList}
+            musicList={musicList}
+            fetchHistory={fetchHistory}
+            handleClearHistory={handleClearHistory}
+            handleDeleteHistory={handleDeleteHistory}
+            musicMap={musicMap}
+            getThemeColors={getThemeColors}
+            themes={themes}
+            itemTheme={itemTheme}
+            setItemTheme={setItemTheme}
+            customColor={customColor}
+            setCustomColor={setCustomColor}
+            cuteFont={cuteFont}
+            currentMusic={currentMusic}
+            playMusic={playMusic}
+            isPlaying={isPlaying}
+            isMusicFavorite={isMusicFavorite}
+            handleToggleFavorite={handleToggleFavorite}
+            pulseKeyframes={pulseKeyframes}
+          />
         )}
 
         {tabValue === 2 && (
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography variant="h5" sx={{ color: getThemeColors().title }}>音乐流管理</Typography>
-                <ThemeSelector themes={themes} itemTheme={itemTheme} setItemTheme={setItemTheme} customColor={customColor} setCustomColor={setCustomColor} />
-              </Box>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField
-                  size="small"
-                  placeholder="搜索音乐流名称..."
-                  value={streamerSearch}
-                  onChange={(e) => setStreamerSearch(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      fetchStreamers(streamerSearch);
-                    }
-                  }}
-                  sx={{ 
-                    '& .MuiOutlinedInput-root': { 
-                      borderRadius: 3,
-                      backgroundColor: '#fff'
-                    } 
-                  }}
-                />
-                <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => fetchStreamers(streamerSearch)}>
-                  刷新
-                </Button>
-                <Button
-                  variant="contained"
-                  component="label"
-                  disabled={uploading}
-                  startIcon={uploading ? <CircularProgress size={20} /> : <UploadIcon />}
-                >
-                  批量上传音频
-                  <input type="file" hidden accept="audio/*" multiple onChange={handleStreamerUpload} />
-                </Button>
-              </Box>
-            </Box>
-
-            <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>ID</TableCell>
-                    <TableCell>原始文件名</TableCell>
-                    <TableCell>格式</TableCell>
-                    <TableCell>存储路径</TableCell>
-                    <TableCell align="right">操作</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {loading ? (
-                    <TableRow><TableCell colSpan={5} align="center" sx={{ py: 8 }}><CircularProgress /></TableCell></TableRow>
-                  ) : streamerList.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} align="center" sx={{ py: 8 }}>暂无音乐流</TableCell></TableRow>
-                  ) : (
-                    streamerList.map((streamer) => (
-                      <TableRow key={streamer.id} hover sx={{ '&:hover': { bgcolor: 'rgba(255, 118, 117, 0.08) !important' } }}>
-                        <TableCell sx={{ 
-                          color: getThemeColors().item, 
-                          fontWeight: 700, 
-                          fontSize: '0.85rem',
-                          fontFamily: cuteFont
-                        }}>{streamer.id.substring(0, 8)}...</TableCell>
-                         <TableCell>
-                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                             <AudioIcon sx={{ color: getThemeColors().item, fontSize: 18 }} />
-                             <Typography variant="body2" sx={{ 
-                               fontWeight: 600, 
-                               color: getThemeColors().item,
-                               fontFamily: cuteFont
-                             }}>
-                               {streamer.original_name}
-                             </Typography>
-                           </Box>
-                         </TableCell>
-                        <TableCell>
-                          <Box component="span" sx={{ 
-                            px: 1.5, py: 0.5, borderRadius: 2, bgcolor: 'secondary.light', color: '#fff', fontSize: '0.75rem', fontWeight: 800,
-                            fontFamily: cuteFont
-                          }}>
-                            {streamer.format.toUpperCase()}
-                          </Box>
-                        </TableCell>
-                        <TableCell sx={{ 
-                           color: 'text.secondary', 
-                           fontSize: '0.85rem',
-                           fontWeight: 700,
-                           fontFamily: cuteFont
-                         }}>{streamer.storage_path}</TableCell>
-                        <TableCell align="right">
-                          <IconButton 
-                            onClick={() => handleDeleteStreamer(streamer.id)} 
-                            sx={{ 
-                              bgcolor: 'error.main', 
-                              color: '#fff',
-                              '&:hover': { 
-                                bgcolor: 'error.dark',
-                                transform: 'scale(1.1)'
-                              },
-                              boxShadow: '0 4px 10px rgba(255, 107, 107, 0.3)',
-                              transition: 'all 0.2s'
-                            }}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
+          <StreamerTab
+            loading={loading}
+            uploading={uploading}
+            streamerList={streamerList}
+            streamerSearch={streamerSearch}
+            setStreamerSearch={setStreamerSearch}
+            fetchStreamers={fetchStreamers}
+            handleStreamerUpload={handleStreamerUpload}
+            handleDeleteStreamer={handleDeleteStreamer}
+            getThemeColors={getThemeColors}
+            themes={themes}
+            itemTheme={itemTheme}
+            setItemTheme={setItemTheme}
+            customColor={customColor}
+            setCustomColor={setCustomColor}
+            cuteFont={cuteFont}
+          />
         )}
 
         {tabValue === 3 && (
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography variant="h5" sx={{ color: getThemeColors().title }}>音乐合集</Typography>
-                <ThemeSelector themes={themes} itemTheme={itemTheme} setItemTheme={setItemTheme} customColor={customColor} setCustomColor={setCustomColor} />
-              </Box>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchGroups}>
-                  刷新
-                </Button>
-                <Button variant="contained" startIcon={<AudioIcon />} onClick={handleOpenCreateGroup}>
-                  创建新合集
-                </Button>
-              </Box>
-            </Box>
-
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 3 }}>
-              {loading ? (
-                <Box sx={{ gridColumn: '1/-1', textAlign: 'center', py: 8 }}><CircularProgress /></Box>
-              ) : groupList.length === 0 ? (
-                <Box sx={{ gridColumn: '1/-1', textAlign: 'center', py: 8 }}>
-                  <Typography color="text.secondary">暂无合集，去创建一个吧！</Typography>
-                </Box>
-              ) : (
-                groupList.map((group) => {
-                  let musicIds = [];
-                  try {
-                    musicIds = JSON.parse(group.content || '[]');
-                  } catch (e) {
-                    console.error('解析合集内容失败', e);
-                  }
-                  
-                  return (
-                    <Paper 
-                      key={group.id} 
-                      sx={{ 
-                        p: 3, 
-                        borderRadius: 4, 
-                        cursor: 'pointer',
-                        transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                        border: '2px solid transparent',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        minHeight: 220,
-                        '&:hover': { 
-                          transform: 'translateY(-8px)',
-                          boxShadow: '0 12px 30px rgba(0,0,0,0.1)',
-                          borderColor: getThemeColors().item
-                        },
-                        position: 'relative',
-                        overflow: 'hidden'
-                      }}
-                      onClick={() => handleViewGroup(group)}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-                        <Box sx={{ 
-                          width: 56, 
-                          height: 56, 
-                          borderRadius: 3, 
-                          bgcolor: 'rgba(255, 118, 117, 0.1)', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center' 
-                        }}>
-                          <AudioIcon sx={{ color: getThemeColors().item, fontSize: 32 }} />
-                        </Box>
-                      </Box>
-                      
-                      <Typography variant="h6" sx={{ fontWeight: 800, mb: 1, color: '#2D3436' }}>
-                        {group.name}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 2 }}>
-                        {musicIds.length} 首音乐
-                      </Typography>
-                      
-                      <Box sx={{ mt: 'auto' }}>
-                        <Divider sx={{ mb: 2, opacity: 0.5 }} />
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Button 
-                            variant="contained"
-                            size="small" 
-                            fullWidth
-                            startIcon={<PlayArrowIcon />}
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              const ids = JSON.parse(group.content || '[]');
-                              const groupQueue = ids.map(id => musicList.find(m => m.id === id)).filter(Boolean);
-                              if (groupQueue.length > 0) {
-                                playMusic(groupQueue[0], groupQueue);
-                              }
-                            }}
-                            sx={{ 
-                              bgcolor: getThemeColors().item,
-                              '&:hover': { bgcolor: getThemeColors().item, opacity: 0.9 },
-                              fontWeight: 700,
-                              borderRadius: 2
-                            }}
-                          >
-                            播放
-                          </Button>
-                          <Tooltip title="编辑">
-                            <Button 
-                              size="small" 
-                              variant="outlined"
-                              onClick={(e) => { e.stopPropagation(); handleOpenEditGroup(group); }}
-                              sx={{ 
-                                minWidth: 40,
-                                px: 1,
-                                borderRadius: 2,
-                                color: 'primary.main',
-                                borderColor: 'divider'
-                              }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </Button>
-                          </Tooltip>
-                          <Tooltip title="删除">
-                            <Button 
-                              size="small" 
-                              variant="outlined"
-                              onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group); }}
-                              sx={{ 
-                                minWidth: 40,
-                                px: 1,
-                                borderRadius: 2,
-                                color: 'error.main',
-                                borderColor: 'divider',
-                                '&:hover': {
-                                  borderColor: 'error.main',
-                                  bgcolor: 'rgba(214, 48, 49, 0.05)'
-                                }
-                              }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </Button>
-                          </Tooltip>
-                        </Box>
-                      </Box>
-                    </Paper>
-                  );
-                })
-              )}
-            </Box>
-          </Box>
+          <GroupTab
+            loading={loading}
+            groupList={groupList}
+            musicList={musicList}
+            fetchGroups={fetchGroups}
+            handleOpenCreateGroup={handleOpenCreateGroup}
+            handleViewGroup={handleViewGroup}
+            handleOpenEditGroup={handleOpenEditGroup}
+            handleDeleteGroup={handleDeleteGroup}
+            playMusic={playMusic}
+            getThemeColors={getThemeColors}
+            themes={themes}
+            itemTheme={itemTheme}
+            setItemTheme={setItemTheme}
+            customColor={customColor}
+            setCustomColor={setCustomColor}
+          />
         )}
 
         {tabValue === 4 && (
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ 
-                  width: 56, 
-                  height: 56, 
-                  borderRadius: 3, 
-                  bgcolor: 'rgba(255, 118, 117, 0.15)', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center' 
-                }}>
-                  <FavoriteIcon sx={{ color: '#FF7675', fontSize: 32 }} />
-                </Box>
-                <Box>
-                  <Typography variant="h5" sx={{ color: getThemeColors().title, fontWeight: 800 }}>我的收藏</Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                    {favoriteGroup ? JSON.parse(favoriteGroup.content || '[]').length : 0} 首收藏音乐
-                  </Typography>
-                </Box>
-                <ThemeSelector themes={themes} itemTheme={itemTheme} setItemTheme={setItemTheme} customColor={customColor} setCustomColor={setCustomColor} />
-              </Box>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button 
-                  variant="outlined" 
-                  color="error" 
-                  startIcon={<DeleteIcon />}
-                  onClick={async () => {
-                    if (window.confirm('确定要清空收藏夹吗？')) {
-                      try {
-                        await updateGroup({ ...favoriteGroup, content: '[]' });
-                        showSnackbar('已清空收藏夹');
-                        fetchGroups();
-                      } catch (e) {
-                        showSnackbar('操作失败', 'error');
-                      }
-                    }
-                  }}
-                  disabled={!favoriteGroup || JSON.parse(favoriteGroup.content || '[]').length === 0}
-                  sx={{ borderRadius: 3 }}
-                >
-                  清空收藏
-                </Button>
-                <Button 
-                  variant="contained" 
-                  startIcon={<PlayArrowIcon />}
-                  onClick={() => {
-                    if (!favoriteGroup) return;
-                    const ids = JSON.parse(favoriteGroup.content || '[]');
-                    const groupQueue = ids.map(id => musicList.find(m => m.id === id)).filter(Boolean);
-                    if (groupQueue.length > 0) {
-                      playMusic(groupQueue[0], groupQueue);
-                    } else {
-                      showSnackbar('收藏夹里还没有音乐哦', 'info');
-                    }
-                  }}
-                  disabled={!favoriteGroup || JSON.parse(favoriteGroup.content || '[]').length === 0}
-                  sx={{ borderRadius: 3 }}
-                >
-                  播放全部
-                </Button>
-              </Box>
-            </Box>
+          <FavoriteTab
+            favoriteGroup={favoriteGroup}
+            musicList={musicList}
+            currentMusic={currentMusic}
+            isPlaying={isPlaying}
+            playMusic={playMusic}
+            handleToggleFavorite={handleToggleFavorite}
+            fetchGroups={fetchGroups}
+            updateGroup={updateGroup}
+            showSnackbar={showSnackbar}
+            getThemeColors={getThemeColors}
+            themes={themes}
+            itemTheme={itemTheme}
+            setItemTheme={setItemTheme}
+            customColor={customColor}
+            setCustomColor={setCustomColor}
+            pulseKeyframes={pulseKeyframes}
+            setTabValue={setTabValue}
+          />
+        )}
 
-            {!favoriteGroup || JSON.parse(favoriteGroup.content || '[]').length === 0 ? (
-              <Paper sx={{ p: 8, textAlign: 'center', borderRadius: 4, bgcolor: 'rgba(255, 255, 255, 0.5)', border: '2px dashed rgba(255, 118, 117, 0.2)' }}>
-                <FavoriteBorderIcon sx={{ fontSize: 64, color: '#FF7675', mb: 2, opacity: 0.3 }} />
-                <Typography color="text.secondary" variant="h6" sx={{ fontWeight: 700 }}>收藏夹空空如也</Typography>
-                <Typography color="text.secondary" variant="body2" sx={{ mt: 1, mb: 3 }}>
-                  在音乐库中点击心形图标，将喜欢的音乐加入这里
-                </Typography>
-                <Button variant="contained" sx={{ borderRadius: 3, px: 4 }} onClick={() => setTabValue(0)}>
-                  去探索音乐
-                </Button>
-              </Paper>
-            ) : (
-              <TableContainer component={Paper} sx={{ borderRadius: 4, overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
-                <Table>
-                  <TableHead sx={{ bgcolor: 'rgba(255, 118, 117, 0.05)' }}>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 800, color: '#2D3436' }}>歌名</TableCell>
-                      <TableCell sx={{ fontWeight: 800, color: '#2D3436' }}>歌手</TableCell>
-                      <TableCell sx={{ fontWeight: 800, color: '#2D3436' }}>专辑</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800, color: '#2D3436' }}>操作</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {(() => {
-                      const ids = JSON.parse(favoriteGroup.content || '[]');
-                      const favoriteMusics = ids.map(id => musicList.find(m => m.id === id)).filter(Boolean);
-                      
-                      return favoriteMusics.map((music) => {
-                        const isPlayingCurrent = currentMusic && currentMusic.id === music.id;
-                        return (
-                          <TableRow 
-                            key={music.id} 
-                            hover 
-                            sx={{ 
-                              '&:hover': { bgcolor: 'rgba(255, 118, 117, 0.03) !important' },
-                              bgcolor: isPlayingCurrent ? 'rgba(255, 118, 117, 0.05)' : 'inherit'
-                            }}
-                          >
-                            <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                {isPlayingCurrent ? (
-                                  <Box sx={{ width: 32, height: 32, borderRadius: 2, bgcolor: '#FF7675', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <AudioIcon sx={{ color: '#fff', fontSize: 18 }} />
-                                  </Box>
-                                ) : (
-                                  <Box sx={{ width: 32, height: 32, borderRadius: 2, bgcolor: 'rgba(255, 118, 117, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <MusicIcon sx={{ color: '#FF7675', fontSize: 18 }} />
-                                  </Box>
-                                )}
-                                <Typography variant="body2" sx={{ fontWeight: 700, color: isPlayingCurrent ? '#FF7675' : '#2D3436' }}>
-                                  {music.name}
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{music.singer_name}</TableCell>
-                            <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{music.album_name}</TableCell>
-                            <TableCell align="right">
-                              <Stack direction="row" spacing={1} justifyContent="flex-end">
-                                <Tooltip title={isPlayingCurrent && isPlaying ? "暂停" : "播放"}>
-                                  <IconButton 
-                                    size="small" 
-                                    onClick={() => playMusic(music, favoriteMusics)}
-                                    sx={{ 
-                                      bgcolor: isPlayingCurrent ? '#FF7675' : 'transparent',
-                                      color: isPlayingCurrent ? '#fff' : '#FF7675',
-                                      '&:hover': { bgcolor: isPlayingCurrent ? '#FF7675' : 'rgba(255, 118, 117, 0.1)' }
-                                    }}
-                                  >
-                                    {isPlayingCurrent && isPlaying ? <PauseIcon fontSize="small" /> : <PlayArrowIcon fontSize="small" />}
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="取消收藏">
-                                  <IconButton 
-                                    size="small" 
-                                    onClick={() => handleToggleFavorite(music.id)}
-                                    sx={{ 
-                                      color: '#fff',
-                                      bgcolor: '#FF2D55',
-                                      animation: 'pulse 2s infinite',
-                                      '@keyframes pulse': pulseKeyframes,
-                                      '&:hover': { 
-                                        bgcolor: '#FF3B30',
-                                        transform: 'scale(1.2) rotate(5deg)',
-                                        boxShadow: '0 4px 12px rgba(255, 45, 85, 0.3)'
-                                      },
-                                      transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                                    }}
-                                  >
-                                    <FavoriteIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              </Stack>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      });
-                    })()}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-          </Box>
+          {tabValue === 5 && (
+          <StatsTab
+            loading={loading}
+            topMusic={topMusic}
+            musicMap={musicMap}
+            musicList={musicList}
+            fetchStats={fetchStats}
+            playMusic={playMusic}
+            getThemeColors={getThemeColors}
+            themes={themes}
+            itemTheme={itemTheme}
+            setItemTheme={setItemTheme}
+            customColor={customColor}
+            setCustomColor={setCustomColor}
+          />
         )}
       </Container>
-
-      {/* 删除确认对话框 */}
-      <Dialog
-        open={openDeleteConfirm}
-        onClose={() => setOpenDeleteConfirm(false)}
-        PaperProps={{
-          sx: { borderRadius: 4, p: 1 }
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>
-          确认删除合集？
-        </DialogTitle>
-        <DialogContent>
-          <Typography color="text.secondary">
-            您确定要删除合集 <Box component="span" sx={{ color: 'error.main', fontWeight: 700 }}>"{groupToDelete?.name}"</Box> 吗？此操作无法撤销。
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button 
-            onClick={() => setOpenDeleteConfirm(false)}
-            sx={{ borderRadius: 2, fontWeight: 700 }}
-          >
-            取消
-          </Button>
-          <Button 
-            onClick={confirmDeleteGroup}
-            variant="contained" 
-            color="error"
-            sx={{ borderRadius: 2, fontWeight: 700, px: 3 }}
-          >
-            确定删除
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* 新增/编辑对话框 */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
@@ -2027,9 +1242,23 @@ const Dashboard = () => {
                   </Typography>
                 </Box>
               </Box>
-              <Button 
-                variant="contained" 
-                startIcon={<PlayArrowIcon />}
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <TextField
+                  size="small"
+                  placeholder="在歌单内搜索..."
+                  value={groupSearch}
+                  onChange={(e) => setGroupSearch(e.target.value)}
+                  sx={{ 
+                    width: 200,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 10,
+                      backgroundColor: 'rgba(0,0,0,0.02)',
+                    }
+                  }}
+                />
+                <Button 
+                  variant="contained" 
+                  startIcon={<PlayArrowIcon />}
                 onClick={() => {
                   const ids = JSON.parse(selectedGroup.content || '[]');
                   const groupQueue = ids.map(id => musicList.find(m => m.id === id)).filter(Boolean);
@@ -2042,21 +1271,45 @@ const Dashboard = () => {
               >
                 播放全部
               </Button>
+            </Box>
             </DialogTitle>
             <DialogContent>
               <List sx={{ mt: 2 }}>
                 {(() => {
                   const ids = JSON.parse(selectedGroup.content || '[]');
                   const groupQueue = ids.map(id => musicList.find(m => m.id === id)).filter(Boolean);
+                  const filteredQueue = groupQueue.filter(m => 
+                    m.name.toLowerCase().includes(groupSearch.toLowerCase()) || 
+                    m.singer_name.toLowerCase().includes(groupSearch.toLowerCase())
+                  );
                   
-                  return groupQueue.map((music, index) => {
+                  if (filteredQueue.length === 0 && groupSearch) {
+                    return (
+                      <Box sx={{ textAlign: 'center', py: 4 }}>
+                        <Typography color="text.secondary">未找到匹配的音乐</Typography>
+                      </Box>
+                    );
+                  }
+
+                  return filteredQueue.map((music, index) => {
                     const isPlayingCurrent = currentMusic?.id === music.id;
 
                     return (
                       <ListItem 
                         key={music.id}
                         disablePadding
-                        sx={{ mb: 1 }}
+                        sx={{ 
+                          mb: 1,
+                          cursor: 'grab',
+                          '&:active': { cursor: 'grabbing' },
+                          transition: 'all 0.2s',
+                          borderLeft: draggedIndex === index ? `4px solid ${getThemeColors().item}` : '4px solid transparent',
+                        }}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, index)}
+                        onDragEnd={handleDragEnd}
                       >
                         <ListItemButton 
                           onClick={() => playMusic(music, groupQueue)}
@@ -2226,170 +1479,33 @@ const Dashboard = () => {
         </Alert>
       </Snackbar>
 
-      {/* 底部播放器 */}
-      {currentMusic && (
-        <Paper
-          sx={{
-            position: 'fixed',
-            bottom: 24,
-            left: { xs: 16, sm: sidebarOpen ? drawerWidth + 24 : collapsedDrawerWidth + 24 },
-            right: 24,
-            p: 2,
-            bgcolor: 'rgba(255, 255, 255, 0.9)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: 3,
-            boxShadow: '0 12px 40px rgba(0,0,0,0.08)',
-            zIndex: 1000,
-            transition: 'left 0.3s',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-          }}
-          elevation={0}
-        >
-          <Container maxWidth="lg">
-            <Stack direction="row" spacing={3} alignItems="center">
-              <Box sx={{ width: 220, overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ 
-                  width: 48, 
-                  height: 48, 
-                  borderRadius: 3, 
-                  background: 'linear-gradient(135deg, #FF7675 0%, #FAB1A0 100%)',
-                   display: 'flex',
-                   alignItems: 'center',
-                   justifyContent: 'center',
-                   boxShadow: '0 4px 12px rgba(255, 118, 117, 0.3)'
-                }}>
-                  <AudioIcon sx={{ color: '#fff' }} />
-                </Box>
-                <Box sx={{ overflow: 'hidden' }}>
-                  <Typography variant="subtitle1" noWrap sx={{ fontWeight: 800, color: 'text.primary' }}>
-                    {currentMusic.name}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ fontWeight: 600 }}>
-                    {currentMusic.singer_name}
-                  </Typography>
-                </Box>
-              </Box>
+      <PlayerControlBar
+        currentMusic={currentMusic}
+        isPlaying={isPlaying}
+        currentTime={currentTime}
+        duration={duration}
+        lyricsOpen={lyricsOpen}
+        togglePlay={togglePlay}
+        playPrevious={playPrevious}
+        playNext={playNext}
+        handleSliderChange={handleSliderChange}
+        formatTime={formatTime}
+        setLyricsOpen={setLyricsOpen}
+        currentAudio={currentAudio}
+        musicList={musicList}
+        sidebarOpen={sidebarOpen}
+        drawerWidth={drawerWidth}
+        collapsedDrawerWidth={collapsedDrawerWidth}
+      />
 
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <IconButton 
-                  onClick={playPrevious} 
-                  disabled={musicList.length <= 1}
-                  sx={{ 
-                    bgcolor: 'primary.main', 
-                    color: '#fff',
-                    '&:hover': { 
-                      bgcolor: 'primary.dark',
-                      transform: 'scale(1.1)',
-                      boxShadow: '0 6px 12px rgba(255, 118, 117, 0.4)'
-                    },
-                    '&.Mui-disabled': {
-                      bgcolor: 'action.disabledBackground',
-                      color: 'action.disabled'
-                    },
-                    boxShadow: '0 4px 10px rgba(255, 118, 117, 0.3)',
-                    transition: 'all 0.2s',
-                    width: 48,
-                    height: 48
-                  }}
-                >
-                  <SkipPreviousIcon />
-                </IconButton>
-
-                <IconButton 
-                  onClick={togglePlay} 
-                  sx={{ 
-                    backgroundColor: 'primary.main', 
-                    color: '#fff',
-                    '&:hover': { 
-                      backgroundColor: 'primary.dark',
-                      transform: 'scale(1.05)',
-                      boxShadow: '0 10px 20px rgba(255, 118, 117, 0.5)'
-                    },
-                    width: 64,
-                    height: 64,
-                    boxShadow: '0 8px 16px rgba(255, 118, 117, 0.4)',
-                    transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                  }}
-                >
-                  {isPlaying ? <PauseIcon sx={{ fontSize: 32 }} /> : <PlayArrowIcon sx={{ fontSize: 32 }} />}
-                </IconButton>
-
-                <IconButton 
-                  onClick={playNext} 
-                  disabled={musicList.length <= 1}
-                  sx={{ 
-                    bgcolor: 'primary.main', 
-                    color: '#fff',
-                    '&:hover': { 
-                      bgcolor: 'primary.dark',
-                      transform: 'scale(1.1)',
-                      boxShadow: '0 6px 12px rgba(255, 118, 117, 0.4)'
-                    },
-                    '&.Mui-disabled': {
-                      bgcolor: 'action.disabledBackground',
-                      color: 'action.disabled'
-                    },
-                    boxShadow: '0 4px 10px rgba(255, 118, 117, 0.3)',
-                    transition: 'all 0.2s',
-                    width: 48,
-                    height: 48
-                  }}
-                >
-                  <SkipNextIcon />
-                </IconButton>
-              </Box>
-
-              <Box sx={{ flexGrow: 1, px: 2 }}>
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <Typography variant="caption" sx={{ minWidth: 40, fontWeight: 700, color: 'text.secondary' }}>
-                    {formatTime(currentTime)}
-                  </Typography>
-                  <Slider
-                    size="small"
-                    value={currentTime}
-                    max={duration || 0}
-                    onChange={handleSliderChange}
-                    sx={{
-                      flexGrow: 1,
-                      color: 'primary.main',
-                      '& .MuiSlider-thumb': {
-                        width: 16,
-                        height: 16,
-                        backgroundColor: '#fff',
-                        border: '3px solid currentColor',
-                        '&:hover, &.Mui-focusVisible': {
-                          boxShadow: '0 0 0 8px rgba(255, 118, 117, 0.16)',
-                        },
-                      },
-                      '& .MuiSlider-rail': {
-                        opacity: 0.2,
-                      },
-                    }}
-                  />
-                  <Typography variant="caption" sx={{ minWidth: 40, fontWeight: 700, color: 'text.secondary' }}>
-                    {formatTime(duration)}
-                  </Typography>
-                </Stack>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', width: 200, gap: 1 }}>
-                <VolumeUpIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
-                <Slider
-                  size="small"
-                  defaultValue={100}
-                  onChange={(e, val) => {
-                    if (currentAudio) currentAudio.volume = val / 100;
-                  }}
-                  sx={{ 
-                    color: 'text.secondary',
-                    '& .MuiSlider-thumb': { width: 12, height: 12 }
-                  }}
-                />
-              </Box>
-            </Stack>
-          </Container>
-        </Paper>
-      )}
+      <LyricsDrawer
+        open={lyricsOpen}
+        onClose={() => setLyricsOpen(false)}
+        currentMusic={currentMusic}
+        parsedLyrics={parsedLyrics}
+        currentLyricIndex={currentLyricIndex}
+        currentAudio={currentAudio}
+      />
     </Box>
   );
 };

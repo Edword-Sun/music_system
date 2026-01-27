@@ -12,6 +12,7 @@ type Music struct {
 	Name       string `gorm:"type:text" json:"name"`
 	Album      string `gorm:"type:text" json:"album"`
 	Band       string `gorm:"type:text" json:"band"`
+	Lyrics     string `gorm:"type:text" json:"lyrics"`
 
 	StreamerID string `gorm:"type:text" json:"streamer_id"`
 

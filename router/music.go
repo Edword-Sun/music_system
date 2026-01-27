@@ -43,8 +43,25 @@ func (h *MusicHandler) Init(engine *gin.Engine) {
 		g.POST("/add", h.CreateMusic)
 		g.PUT("/update", h.UpdateMusic)
 		g.DELETE("/delete", h.DeleteMusic)
+		g.POST("/batch-sync", h.BatchSyncFromStreamers)
 	}
 
+}
+
+func (h *MusicHandler) BatchSyncFromStreamers(c *gin.Context) {
+	count, err := h.musicService.BatchCreateFromStreamers()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, tool.Response{
+			Message: "同步失败",
+			Body:    err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, tool.Response{
+		Message: fmt.Sprintf("同步成功，已新增 %d 首音乐", count),
+		Body:    count,
+	})
 }
 
 func (h *MusicHandler) ListMusic(c *gin.Context) {
@@ -61,7 +78,7 @@ func (h *MusicHandler) ListMusic(c *gin.Context) {
 
 	offset := (condition.Page - 1) * condition.Size
 
-	data, total, err := h.musicService.ListMusics(offset, condition.Size)
+	data, total, err := h.musicService.ListMusics(offset, condition.Size, condition.Keyword)
 	if err != nil {
 		fmt.Println("list music 错误", err)
 		c.JSON(http.StatusOK, tool.Response{

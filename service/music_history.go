@@ -64,3 +64,21 @@ func (svc *MusicHistoryService) DeleteMusicHistory(condition filter.DeleteMusicH
 
 	return nil
 }
+
+func (svc *MusicHistoryService) DeleteAllMusicHistory() error {
+	err := svc.MusicHistoryRepository.DeleteAllMusicHistory()
+	if err != nil {
+		log.Println("err: ", err.Error())
+		return err
+	}
+	return nil
+}
+
+func (svc *MusicHistoryService) GetTopMusic(limit int) (error, []*repository.MusicStat) {
+	err, stats := svc.MusicHistoryRepository.GetTopMusic(limit)
+	if err != nil {
+		log.Println("err: ", err.Error())
+		return err, nil
+	}
+	return nil, stats
+}

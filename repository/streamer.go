@@ -99,10 +99,21 @@ func (repo *StreamerRepository) List(offset, limit int, searchName string) ([]mo
 	err := query.Offset(offset).Limit(limit).Find(&streamers).Error
 	if err != nil {
 		log.Println("err", err)
-		return nil, 0, err
+		return nil, 0, errors.New("内部错误")
 	}
 
 	return streamers, total, nil
+}
+
+func (repo *StreamerRepository) GetUnlinkedStreamers() ([]model.Streamer, error) {
+	var streamers []model.Streamer
+	// 查找在 streamer 表中但不在 music 表中的记录
+	err := repo.db.Where("id NOT IN (SELECT streamer_id FROM music)").Find(&streamers).Error
+	if err != nil {
+		log.Println("GetUnlinkedStreamers error:", err)
+		return nil, errors.New("内部错误")
+	}
+	return streamers, nil
 }
 
 //func (repo *StreamerRepository) RealDelete(id string) error {

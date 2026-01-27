@@ -20,5 +20,7 @@ type ListMusicHistory struct {
 }
 
 type DeleteMusicHistory struct {
-	ID string `json:"id"`
+	ID      string   `json:"id"`
+	IDs     []string `json:"ids"`
+	MusicID string   `json:"music_id"`
 }

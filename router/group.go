@@ -34,7 +34,40 @@ func (h *GroupHandler) Init(r *gin.Engine) {
 
 		g.POST("/update", h.UpdateGroup)
 		g.DELETE("/delete", h.DeleteGroup)
+
+		g.POST("/add-music", h.AddMusicToGroup)
+		g.POST("/remove-music", h.RemoveMusicFromGroup)
 	}
+}
+
+func (h *GroupHandler) AddMusicToGroup(c *gin.Context) {
+	var req handler.GroupMusicReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, tool.Response{Message: "参数错误", Body: err})
+		return
+	}
+
+	if err := h.groupService.AddMusicToGroup(req.GroupID, req.MusicID); err != nil {
+		c.JSON(http.StatusOK, tool.Response{Message: "添加失败", Body: err})
+		return
+	}
+
+	c.JSON(http.StatusOK, tool.Response{Message: "添加成功"})
+}
+
+func (h *GroupHandler) RemoveMusicFromGroup(c *gin.Context) {
+	var req handler.GroupMusicReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, tool.Response{Message: "参数错误", Body: err})
+		return
+	}
+
+	if err := h.groupService.RemoveMusicFromGroup(req.GroupID, req.MusicID); err != nil {
+		c.JSON(http.StatusOK, tool.Response{Message: "移除失败", Body: err})
+		return
+	}
+
+	c.JSON(http.StatusOK, tool.Response{Message: "移除成功"})
 }
 
 func (h *GroupHandler) CreateGroup(c *gin.Context) {
