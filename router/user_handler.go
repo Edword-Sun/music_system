@@ -5,7 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"music_system/model"
 	"music_system/router/handler"
 	"music_system/service"
 	"music_system/tool"
