@@ -14,10 +14,12 @@ import {
   ChevronLeft as ChevronLeftIcon,
   Menu as MenuIcon,
   Logout as LogoutIcon,
-  Login as LoginIcon
+  Login as LoginIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import ProfileModal from './ProfileModal';
 
 const Sidebar = ({ 
   open, 
@@ -29,6 +31,7 @@ const Sidebar = ({
 }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [profileOpen, setProfileOpen] = React.useState(false);
   const isGuest = user?.role === 'guest';
 
   const menuItems = [
@@ -157,7 +160,7 @@ const Sidebar = ({
             </Avatar>
           </Tooltip>
           {open && (
-            <Box sx={{ ml: 1.5, overflow: 'hidden' }}>
+            <Box sx={{ ml: 1.5, overflow: 'hidden', flexGrow: 1 }}>
               <Typography variant="body2" sx={{ fontWeight: 800, noWrap: true }}>
                 {isGuest ? '游客模式' : (user?.nickname || user?.username)}
               </Typography>
@@ -165,6 +168,11 @@ const Sidebar = ({
                 {isGuest ? '登录体验更多功能' : (user?.role === 'admin' ? '管理员' : '普通用户')}
               </Typography>
             </Box>
+          )}
+          {open && !isGuest && (
+            <IconButton size="small" onClick={() => setProfileOpen(true)} sx={{ opacity: 0.6, '&:hover': { opacity: 1 } }}>
+              <EditIcon fontSize="inherit" />
+            </IconButton>
           )}
         </Box>
         
@@ -201,6 +209,11 @@ const Sidebar = ({
           </ListItemButton>
         </Tooltip>
       </Box>
+
+      <ProfileModal 
+        open={profileOpen} 
+        onClose={() => setProfileOpen(false)} 
+      />
     </Drawer>
   );
 };

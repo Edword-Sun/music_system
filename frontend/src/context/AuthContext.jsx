@@ -47,6 +47,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     setUser(null);
+    setLoading(true); // 重新进入加载状态以刷新 UI
     // 登出后自动切换回游客身份
     await initAuth();
   };

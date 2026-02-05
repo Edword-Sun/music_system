@@ -64,6 +64,8 @@ import {
   clearAllMusicHistory,
   getTopMusic,
 } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import ThemeSelector from '../components/dashboard/ThemeSelector';
 import Sidebar from '../components/dashboard/Sidebar';
 import PlayerControlBar from '../components/dashboard/PlayerControlBar';
@@ -76,6 +78,10 @@ import FavoriteTab from '../components/dashboard/FavoriteTab';
 import StatsTab from '../components/dashboard/StatsTab';
 
 const Dashboard = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const isGuest = user?.role === 'guest';
+
   const [tabValue, setTabValue] = useState(0);
   const [musicList, setMusicList] = useState([]);
   const [historyList, setHistoryList] = useState([]);
@@ -948,10 +954,45 @@ const Dashboard = () => {
           mb: 12, 
           flexGrow: 1, 
           transition: 'margin 0.3s',
-          width: '100%',
-        }}
-      >
-        {/* 内容区域开始 */}
+        width: '100%',
+      }}
+    >
+      {isGuest && (
+        <Paper 
+          elevation={0}
+          sx={{ 
+            p: 2, 
+            mb: 3, 
+            background: 'linear-gradient(90deg, #FF7675 0%, #FAB1A0 100%)', 
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderRadius: 3,
+            boxShadow: '0 8px 20px rgba(255, 118, 117, 0.2)'
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="body1" sx={{ fontWeight: 700 }}>
+              👋 您当前以游客身份访问。登录后可享受个人收藏、自定义合集等更多功能！
+            </Typography>
+          </Box>
+          <Button 
+            variant="contained" 
+            onClick={() => navigate('/auth')}
+            sx={{ 
+              bgcolor: 'white', 
+              color: 'primary.main',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' },
+              fontWeight: 800,
+              px: 3
+            }}
+          >
+            立即登录 / 注册
+          </Button>
+        </Paper>
+      )}
+      {/* 内容区域开始 */}
         {tabValue === 0 && (
           <MusicLibraryTab
             loading={loading}

@@ -27,6 +27,10 @@ export const register = (data) => request('/auth/register', { method: 'POST', js
 export const login = (data) => request('/auth/login', { method: 'POST', json: data });
 export const guestLogin = () => request('/auth/guest', { method: 'POST' });
 
+// User 相关
+export const updateUser = (data) => request('/user/update', { method: 'PUT', json: data });
+export const getUserInfo = (id) => request(`/user/info?id=${id}`);
+
 
 // 音乐相关
 export async function createMusic(music) {

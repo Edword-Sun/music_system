@@ -59,6 +59,7 @@ func main() {
 	musicHistoryHandler := router.NewMusicHistoryHandler(musicHistoryService)
 	groupHandler := router.NewGroupHandler(groupService)
 	authHandler := router.NewAuthHandler(authService)
+	userHandler := router.NewUserHandler(userService)
 
 	healthHandler.Init(r)
 	musicHandler.Init(r)
@@ -66,6 +67,7 @@ func main() {
 	musicHistoryHandler.Init(r)
 	groupHandler.Init(r)
 	authHandler.Init(r)
+	userHandler.Init(r)
 
 	r.Run(":8080") // listen and serve on 0.0.0.0:8080
 }

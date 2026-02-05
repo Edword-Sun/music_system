@@ -35,12 +35,17 @@ export default function AuthPage() {
     nickname: ''
   });
 
-  const { login: setAuthData } = useAuth();
+  const { login: setAuthData, user } = useAuth();
   const navigate = useNavigate();
+  const isGuest = user?.role === 'guest';
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (error) setError('');
+  };
+
+  const handleGuestContinue = () => {
+    navigate('/');
   };
 
   const handleSubmit = async (e) => {
