@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import Dashboard from './pages/Dashboard';
+import AuthPage from './pages/AuthPage';
 import { AuthProvider } from './context/AuthContext';
 
 // 明亮、轻快、俏皮的主题
@@ -141,6 +142,7 @@ function App() {
         <Router>
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/auth" element={<AuthPage />} />
             {/* 兜底路由 */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

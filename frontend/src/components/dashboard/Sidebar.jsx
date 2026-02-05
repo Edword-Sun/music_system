@@ -1,7 +1,8 @@
 import React from 'react';
 import { 
   Drawer, Box, List, ListItem, ListItemButton, 
-  ListItemIcon, ListItemText, Typography, IconButton, Tooltip 
+  ListItemIcon, ListItemText, Typography, IconButton, Tooltip,
+  Avatar, Divider
 } from '@mui/material';
 import {
   LibraryMusic as MusicIcon,
@@ -11,8 +12,12 @@ import {
   Assessment as BarChartIcon,
   SettingsVoice as StreamerIcon,
   ChevronLeft as ChevronLeftIcon,
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  Logout as LogoutIcon,
+  Login as LoginIcon
 } from '@mui/icons-material';
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Sidebar = ({ 
   open, 
@@ -22,6 +27,10 @@ const Sidebar = ({
   drawerWidth, 
   collapsedDrawerWidth 
 }) => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const isGuest = user?.role === 'guest';
+
   const menuItems = [
     { label: '音乐库', icon: <MusicIcon />, value: 0 },
     { label: '我的收藏', icon: <FavoriteIcon sx={{ color: '#FF7675' }} />, value: 4 },
@@ -45,6 +54,8 @@ const Sidebar = ({
           borderRight: 'none',
           backgroundColor: '#fff',
           boxShadow: '4px 0 24px rgba(0,0,0,0.02)',
+          display: 'flex',
+          flexDirection: 'column'
         },
       }}
     >
@@ -64,7 +75,8 @@ const Sidebar = ({
           {open ? <ChevronLeftIcon /> : <MenuIcon />}
         </IconButton>
       </Box>
-      <Box sx={{ px: 2, mt: 2 }}>
+
+      <Box sx={{ px: 2, mt: 2, flexGrow: 1 }}>
         <List sx={{ '& .MuiListItem-root': { mb: 1 } }}>
           {menuItems.map((item) => (
             <ListItem key={item.value} disablePadding sx={{ display: 'block' }}>
@@ -117,6 +129,77 @@ const Sidebar = ({
             </ListItem>
           ))}
         </List>
+      </Box>
+
+      <Box sx={{ p: 2 }}>
+        <Divider sx={{ mb: 2, opacity: 0.6 }} />
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: open ? 'flex-start' : 'center',
+            px: open ? 1 : 0,
+            mb: 1
+          }}
+        >
+          <Tooltip title={!open ? (isGuest ? '未登录' : user?.nickname || user?.username) : ''} placement="right">
+            <Avatar 
+              src={user?.avatar} 
+              sx={{ 
+                width: 36, 
+                height: 36, 
+                bgcolor: isGuest ? '#dfe6e9' : 'primary.main',
+                fontSize: '1rem',
+                fontWeight: 700
+              }}
+            >
+              {isGuest ? '?' : (user?.nickname || user?.username || 'U')[0].toUpperCase()}
+            </Avatar>
+          </Tooltip>
+          {open && (
+            <Box sx={{ ml: 1.5, overflow: 'hidden' }}>
+              <Typography variant="body2" sx={{ fontWeight: 800, noWrap: true }}>
+                {isGuest ? '游客模式' : (user?.nickname || user?.username)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                {isGuest ? '登录体验更多功能' : (user?.role === 'admin' ? '管理员' : '普通用户')}
+              </Typography>
+            </Box>
+          )}
+        </Box>
+        
+        <Tooltip title={!open ? (isGuest ? '登录' : '退出登录') : ''} placement="right">
+          <ListItemButton
+            onClick={() => isGuest ? navigate('/auth') : logout()}
+            sx={{
+              minHeight: 48,
+              justifyContent: open ? 'initial' : 'center',
+              px: 2.5,
+              borderRadius: 3,
+              color: isGuest ? 'primary.main' : 'text.secondary',
+              '&:hover': {
+                backgroundColor: isGuest ? 'rgba(255, 118, 117, 0.1)' : 'rgba(0, 0, 0, 0.04)',
+              }
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: 0,
+                mr: open ? 2 : 'auto',
+                justifyContent: 'center',
+                color: 'inherit'
+              }}
+            >
+              {isGuest ? <LoginIcon /> : <LogoutIcon />}
+            </ListItemIcon>
+            {open && (
+              <ListItemText 
+                primary={isGuest ? '立即登录' : '退出登录'} 
+                primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem' }} 
+              />
+            )}
+          </ListItemButton>
+        </Tooltip>
       </Box>
     </Drawer>
   );

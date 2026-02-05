@@ -4,6 +4,11 @@ const BASE = import.meta.env.VITE_API_BASE || '' // 开发环境走vite代理，
 
 async function request(path, { method = 'GET', json } = {}) {
   const headers = {}
+  const token = localStorage.getItem('token')
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  
   let body
   if (json !== undefined) {
     headers['Content-Type'] = 'application/json'
@@ -16,6 +21,12 @@ async function request(path, { method = 'GET', json } = {}) {
   }
   return await res.text()
 }
+
+// Auth 相关
+export const register = (data) => request('/auth/register', { method: 'POST', json: data });
+export const login = (data) => request('/auth/login', { method: 'POST', json: data });
+export const guestLogin = () => request('/auth/guest', { method: 'POST' });
+
 
 // 音乐相关
 export async function createMusic(music) {

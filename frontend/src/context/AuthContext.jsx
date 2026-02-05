@@ -1,30 +1,59 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { guestLogin } from '../api/client';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const initAuth = async () => {
     try {
-      const raw = localStorage.getItem('user');
-      if (raw) setUser(JSON.parse(raw));
-    } catch {}
-  }, []);
-
-  const login = (u) => {
-    setUser(u);
-    try { localStorage.setItem('user', JSON.stringify(u)); } catch {}
+      const storedUser = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+      
+      if (storedUser && token) {
+        setUser(JSON.parse(storedUser));
+        setLoading(false);
+      } else {
+        // 如果没有存储的用户信息，尝试游客登录
+        const res = await guestLogin();
+        if (res.body) {
+          const { token, ...userData } = res.body;
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify(userData));
+          setUser(userData);
+        }
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Auth initialization failed:', error);
+      setLoading(false);
+    }
   };
 
-  const logout = () => {
+  useEffect(() => {
+    initAuth();
+  }, []);
+
+  const loginAction = (authData) => {
+    const { token, ...userData } = authData;
+    setUser(userData);
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
+
+  const logoutAction = async () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
     setUser(null);
-    try { localStorage.removeItem('user'); } catch {}
+    // 登出后自动切换回游客身份
+    await initAuth();
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, logout }}>
-      {children}
+    <AuthContext.Provider value={{ user, setUser, login: loginAction, logout: logoutAction, loading }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 }
