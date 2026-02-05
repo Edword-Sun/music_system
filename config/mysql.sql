@@ -51,16 +51,9 @@ CREATE TABLE IF NOT EXISTS `user` (
     `update_time` DATETIME NOT NULL
 );
 
--- ============================================================
--- 迁移脚本 (Migration / Alter Table)
--- ============================================================
 
--- 2026-02-05: 用户系统升级
--- 如果您已经有旧版本的数据库，请运行以下语句：
-
--- 1. 创建用户表
 CREATE TABLE IF NOT EXISTS `user` (
-    `id` VARCHAR(255) PRIMARY KEY DEFAULT (UUID()),
+                                      `id` VARCHAR(255) PRIMARY KEY DEFAULT (UUID()),
     `username` VARCHAR(100) UNIQUE NOT NULL,
     `password` VARCHAR(255) NOT NULL,
     `nickname` VARCHAR(100),
@@ -68,10 +61,8 @@ CREATE TABLE IF NOT EXISTS `user` (
     `role` VARCHAR(20) DEFAULT 'user',
     `create_time` DATETIME NOT NULL,
     `update_time` DATETIME NOT NULL
-);
+    );
 
--- 2. 为播放历史表添加用户关联字段
-ALTER TABLE `music_history` ADD COLUMN IF NOT EXISTS `user_id` VARCHAR(255) AFTER `music_id`;
+ALTER TABLE `music_history` ADD COLUMN `user_id` VARCHAR(255) AFTER `music_id`;
 
--- 3. 为音乐合集表添加用户关联字段
-ALTER TABLE `group` ADD COLUMN IF NOT EXISTS `user_id` VARCHAR(255) AFTER `content`;
+ALTER TABLE `group` ADD COLUMN `user_id` VARCHAR(255) AFTER `content`;

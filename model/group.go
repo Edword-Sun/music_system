@@ -16,6 +16,7 @@ type Group struct {
 	// 但既然你想多练手，我们现在把它定义为原始 string，由你在业务逻辑中手动转换。
 	// 数据库类型设置为 json，可以让数据库帮我们做格式校验。
 	Content string `gorm:"type:json" json:"content"`
+	UserID  string `gorm:"type:varchar(255);index" json:"user_id"`
 
 	CreateTime time.Time `gorm:"type:datetime; not null" json:"create_time"`
 	UpdateTime time.Time `gorm:"type:datetime; not null" json:"update_time"`

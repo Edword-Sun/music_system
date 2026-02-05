@@ -9,6 +9,7 @@ import (
 type MusicHistory struct {
 	ID      string `gorm:"primarykey type:text;default:(UUID())" json:"id"`
 	MusicID string `gorm:"type:text" json:"music_id"`
+	UserID  string `gorm:"type:varchar(255);index" json:"user_id"`
 
 	CreateTime time.Time `gorm:"type:DATETIME with time zone;not null" json:"create_time"`
 	UpdateTime time.Time `gorm:"type:DATETIME with time zone;not null" json:"update_time"`
