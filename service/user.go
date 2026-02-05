@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"music_system/model"
 	"music_system/model/repo"
 )
