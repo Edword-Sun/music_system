@@ -63,6 +63,8 @@ import {
   removeMusicFromGroup,
   clearAllMusicHistory,
   getTopMusic,
+  getAudioUrl,
+  addMusicHistory,
 } from '../api/client';
 import ThemeSelector from '../components/dashboard/ThemeSelector';
 import Sidebar from '../components/dashboard/Sidebar';
